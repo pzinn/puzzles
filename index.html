@@ -1,0 +1,269 @@
+<html>
+  <head>
+<title>Paul's puzzle viewer v2.5</title>
+  
+<script id="shader-fs0" type="x-shader/x-fragment">
+#ifdef GL_ES
+   precision highp float;
+//    precision highp int;
+#endif
+uniform vec4 currentColor;
+uniform float intens;
+void main(void)
+{
+gl_FragColor = intens*currentColor+(1.-intens)*vec4(1.,1.,1.,1.); 
+}
+</script>
+  
+<script id="shader-vs0" type="x-shader/x-vertex">
+const mat4 orthogMatrix=mat4(1.,0.,0.,0., 0.5,0.866025,0.,0., 0.,0.,1.,0., 0.,0.,0.5,0.866025); // converts triangular lattice coordinates to orthonormal basis
+uniform mat4 rotationMatrix;
+uniform float scale;
+uniform float aspect;
+uniform vec4 shift;
+attribute vec4 VertexPosition;
+void main(void) 
+{
+  gl_Position=rotationMatrix*orthogMatrix*VertexPosition*scale+shift; // yes, scale and orthogMatrix could be absorbed in the rotation matrix, but more convenient this way
+  if (aspect<1.0) gl_Position[1]=gl_Position[1]*aspect; else gl_Position[0]=gl_Position[0]/aspect;
+  gl_Position[2]=-gl_Position[2];
+  gl_Position[3]=1.0; // trick! :) (we kill the projective coordinate => usual 4d affine)
+}
+</script>
+
+<script id="shader-fs1" type="x-shader/x-fragment">
+#ifdef GL_ES
+  precision highp float;
+//    precision highp int;
+#endif
+uniform vec4 currentColor;
+uniform sampler2D sampler;
+void main(void) 
+{
+  // use the texture
+  gl_FragColor = texture2D(sampler,gl_PointCoord)*currentColor;
+//  if (gl_FragColor.a<0.5) discard; // simplistic transparency!! replaced with proper blending
+}
+</script>
+
+<script id="shader-vs1" type="x-shader/x-vertex">
+const mat4 orthogMatrix=mat4(1.,0.,0.,0., 0.5,0.866025,0.,0., 0.,0.,1.,0., 0.,0.,0.5,0.866025); // converts triangular lattice coordinates to orthonormal basis
+uniform mat4 rotationMatrix;
+uniform float scale;
+uniform float aspect;
+uniform vec4 shift;
+attribute vec4 VertexPosition;
+uniform float pointSize;
+void main(void) 
+{
+  gl_Position=rotationMatrix*orthogMatrix*VertexPosition*scale+shift; // yes, scale and orthogMatrix could be absorbed in the rotation matrix, but more convenient this way
+  if (aspect<1.0) gl_Position[1]=gl_Position[1]*aspect; else gl_Position[0]=gl_Position[0]/aspect;
+  gl_Position[2]=-gl_Position[2]-0.06; // some arbitrary quantity to put points on top of everyone
+  gl_Position[3]=1.0; // trick! :) (we kill the projective coordinate => usual 4d affine)
+  gl_PointSize=8.+(pointSize-8.)*scale;
+  if (gl_PointSize>32.) gl_PointSize=32.; // shouldn't be bigger than texture size, which is hardcoded to be 32 at the moment :/
+}
+</script>
+
+  <link rel="stylesheet" type="text/css" href="puzzle.css"/>
+
+  <script type="text/javascript" src="partition.js"></script>
+  
+  <script type="text/javascript" src="matrix.js"></script>
+  
+  <script type="text/javascript" src="young.js"></script>
+  
+  <script type="text/javascript" src="puzzle.js"></script>
+  
+  <link rel="stylesheet" type="text/css" href="menu.css"/>
+  <script type="text/javascript" src="menu.js"></script>
+  
+  <script type="text/javascript" src="toggle.js"></script>
+  <link rel="stylesheet" type="text/css" href="toggle.css"/>
+
+  <script type="text/javascript" src="text.js"></script>
+
+  <script type="text/javascript" src="help.js"></script>
+  <link rel="stylesheet" type="text/css" href="help.css"/>
+
+  <script type="text/javascript" src="detect-element-resize.js"></script>
+  
+</head>
+
+<body onload="initToggle();startScript();">
+
+<table border="1" class="mytable">
+<tr>
+  <td id="precanvas" style="position:relative;width:600;height:600" colspan="2">
+    <canvas id="webglcanvas" style="position:relative;background:transparent;left:0;top:0;z-index:1"></canvas>
+    <div style="position: absolute; right:0px;top:0px;z-index:2" class="menu-title" onclick="process()" id="submit">Process</div>
+    <img src="resize-11-16.png" style="position: absolute; right:0px;bottom:0px;z-index:2;cursor: pointer" ondrag="doresize()">
+    <div id="menuoverlay" style="position: absolute;left:0px;top:0px;height:0px;z-index:2">
+      <div id="view" class="menu-title"
+	   onmouseover="mopen('view','view-menu')" 
+	   onmouseout="mclosetime('view')"
+	   onclick="mtoggle('view','view-menu')">
+	Toggle view
+      </div>
+      <ul id="view-menu"
+	  class="menu"
+	  onmouseover="mcanceltimer('view')" 
+	  onmouseout="mclosetime('view')"
+	  onclick="drawScene()"
+	  hidden>
+	<li class="toggle-button" id="check1"><button>G</button>reen lines<span class="info">Displays one of the two conserved charges</span></li>
+	<li class="toggle-button" id="check2"><button>R</button>ed lines<span class="info">Displays one of the two conserved charges</span></li>
+	<li class="toggle-button" id="check4"><button>L</button>oops<span class="info">Views puzzles as a loop model</span></li>
+	<li class="toggle-button" checked id="check8"><button>F</button>rame<span class="info">Draws a frame around the puzzle</span></li>
+	<li class="toggle-button" id="check16"><button>A</button>rrows<span class="info">Displays the labels of the 3/4 partitions and their orientation</span></li>
+	<li class="toggle-button" id="check32"><button>P</button>oints<span class="info">Displays external edges as colored vertices</span></li>
+	<li class="toggle-button" id="check64">Green line numbering<span class="info">Numbering that is relevant for tableau representation</span></li>
+	<li class="toggle-button" id="check128">Red line numbering<span class="info">Numbering that is relevant for dual tableau representation</span></li>
+	<li class="toggle-button" id="check256">Edge numbering<span class="info">Numbering that is relevant for honeycomb representation</span></li>
+	<li class="toggle-button" id="check512">Dual edge numbering<span class="info">Numbering that is relevant for dual honeycomb representation</span></li>
+	<li class="toggle-button" id="check1024">Traditional edge labelling<span class="info">Old-fashioned puzzle notation. For compatibility only.</span></li>
+      </ul>
+    </div>
+  </td>
+  <td valign="top" rowspan="2">
+    <h3 class="menu-title-active">Partitions</h3>
+    All partitions are read from bottom/left to top/right (toggle the arrows to see on the picture)
+    <div id="y1">
+      <span style="position:absolute">
+	<span class="toggle-button" id="y1toggle" onchange="togglePartition('y1',this.checked)"></span>
+	<span id="y1comp" class="complement" onchange="toggleComp('y1')"></span>
+      </span>
+      <span class="label">&lambda;:</span>
+    </div>
+    <div id="y2">
+      <span style="position:absolute">
+	<span class="toggle-button" id="y2toggle" onchange="togglePartition('y2',this.checked)"></span>
+	<span id="y2comp" class="complement" onchange="toggleComp('y2')"></span>
+      </span>
+      <span class="label">&mu;:</span>
+    </div>
+    <div id="y3">
+      <span style="position:absolute">
+	<span class="toggle-button" id="y3toggle" onchange="togglePartition('y3',this.checked)"></span>
+	<span id="y3comp" class="complement" onchange="toggleComp('y3')"></span>
+      </span>
+      <span class="label">&nu;:</span>
+    </div>
+    <div id="y4" hidden>
+      <span style="position:absolute">
+	<span class="toggle-button" id="y4toggle" onchange="togglePartition('y4',this.checked)"></span>
+	<span id="y4comp" class="complement" onchange="toggleComp('y4')"></span>
+      </span>
+      <span class="label">&rho;:</span>
+    </div>
+    <p><input type="checkbox" id="updateparts"/> update partitions from puzzle</p>
+    <hr/>
+    <div id="multi">
+      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','sizes-section')" id="sizes">Sizes</span>
+      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','tiles-section')" id="tiles">Tiles</span>
+      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','controls-section')" id="controls">Controls</span>
+      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','editor-section')" id="editor">Editor</span>
+      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','examples-section')" id="examples">Examples</span>
+      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','help-section')" id="help">Help</span>
+    </div>
+    <div id="sizes-section" hidden>
+      <br/>
+      <div><input type="range" id="heightrange" onchange="setSize('height',this.value)" step="1" min="1" max="10" value="2"/> height&nbsp;=&nbsp;<span id="height">2</span></div>
+      <div><input type="range" id="widthrange" onchange="setSize('width',this.value)" step="1" min="1" max="10" value="2"/> width&nbsp;=&nbsp;<span id="width">2</span></div>
+      <span class="toggle-button" id="doubletoggle" onchange="toggleDouble(this.checked)">double puzzle</span>
+    </div>
+    <div id="tiles-section" hidden>
+      <ul style="list-style:none;padding:0">
+      <li class="toggle-button" id="Ktoggle">K-tile</li>
+      <li class="toggle-button" id="Kinvtoggle">180&deg; K-tile</li>
+      <li class="toggle-button" id="equivtoggle">equivariant tile</li>
+      <li class="toggle-button" id="nondegtoggle" hidden>nondegenerate tiles</li>
+      <li class="toggle-button" id="equiv2toggle">120&deg; equivariant tile</li>
+      <li class="toggle-button" id="equiv3toggle">240&deg; equivariant tile</li>
+    </ul>
+    </div>
+    <div id="examples-section" hidden>
+      <ul>
+	<li>The <a href="./?height=5&width=4&y1=3,2,1,1&y2=3,1&y3=4,3,2,1,1&y3comp&process">example</a> from my <a href="http://www.lpthe.jussieu.fr/~pzinn/semi/berkeley.pdf">Berkeley lectures</a>.</li>
+	<li>How many lines in 3-space intersect 4 given lines in general position? <a href="./?height=2&width=2&y1=1&y2=1&y3=1&y4=1&process">Answer</a>...</li>
+      </ul>
+      </div>
+    <div id="help-section" hidden>
+      <ul>
+	<li onmouseover="openhelp(this,'y1toggle','y2toggle','y3toggle','y4toggle');" 
+	    onmouseout="closehelp(this);">Toggle some partitions to activate them.</li>
+	<li onmouseover="openhelp(this,'y1','y2','y3','y4');" 
+	    onmouseout="closehelp(this);">Define the active partitions.</li>
+	<li onmouseover="openhelp(this,'submit');" 
+	    onmouseout="closehelp(this);">Press "Process".<br/>Puzzles will be created (as surfaces embedded in 4d).</li>
+	<li onmouseover="openhelp(this,'puzzles');" 
+	    onmouseout="closehelp(this);">They can be selected by left-clicking on the buttons in the lower section.<br/>The "&empty;" button is a template, numbered buttons are individual puzzles,<br/>the "S" button is a panoramic view (left-click on the picture to go from/to it).</li>
+	<li onmouseover="openhelp(this,'webglcanvas');" 
+	    onmouseout="closehelp(this);">Drag with the mouse/right-button to 3d-rotate the picture.</li>
+	<li onmouseover="openhelp(this,'sizes','tiles');" 
+	    onmouseout="closehelp(this);">Use ``Sizes'' and ``Tiles'' to vary those features of puzzles (before processing).</li>
+	<li onmouseover="openhelp(this,'controls');" 
+	    onmouseout="closehelp(this);">Use ``Controls'' for various preset views and keyboard shortcuts.</li>
+	<li onmouseover="openhelp(this,'examples');" 
+	    onmouseout="closehelp(this);">You can also browse the examples in the ``Examples'' section.</li>
+	<li>Known Bugs:
+	  <br/>canvas wobbling a bit
+	  <br/>line numbering is buggy with double puzzles or partial puzzles
+	  <br/>Resizing only works with certain browsers
+	</li>
+      </ul>
+    </div>
+    <div id="editor-section" hidden>
+      <p>Try building puzzles yourself! (alpha)</p>
+      <span class="toggle-button" id="editortoggle">Manual mode</span>
+      <p>Hints: <ul><li>Left click to select tiles at bottom, right click to unselect.</li><li>For easier editing, turn on ``Points'' in toggle view, and use views 0 or 1.</li><li>No erasing (but can undo last tile with middle button), only one editable puzzle at a time.</li></ul></p>
+    </div>
+    <div id="controls-section" hidden>
+      <ul>
+	<li>Predefined views:
+	  <ul>
+	    <li/><button onclick="presetView(0)">0</button> puzzle
+	    <li/><button onclick="presetView(1)">1</button> mosaic 
+	    <li/><button onclick="presetView(2)">2</button> tableau
+	    <span style="font-size:12px">(turn on frame and green line numbering)</span>
+	    <li/><button onclick="presetView(3)">3</button> dual tableau
+	    <span style="font-size:12px">(turn on frame and red line numbering)</span>
+	    <li/><button onclick="presetView(4)">4</button> square lattice
+	    <li/><button onclick="presetView(5)">5</button> honeycomb
+	    <span style="font-size:12px">(move a bit to 0 or 1, or use edge numbering)</span>
+	    <li/><button onclick="presetView(6)">6</button> dual honeycomb
+	    <span style="font-size:12px">(move a bit to 7 or 8, or use dual edge numbering)</span>
+	    <li/><button onclick="presetView(7)">7</button> dual puzzle
+	    <li/><button onclick="presetView(8)">8</button> dual mosaic
+	    <li/><button onclick="presetView(9)">9</button> puzzle rotated 180&deg;
+	  </ul>
+	</li>
+	<li><button onclick="toggleAnimation()">space</button> start/stop animation</li>
+	<li><button onclick="rotate90()">enter</button> rotate 90&deg; in the plane orthogonal to the projection plane</li>
+	<li>&larr; and &rarr; for previous/next puzzle, &uarr; and &darr; for previous/next series.
+      </ul>
+      <p><input type="checkbox" id="keyboard" checked onclick="toggleKeyboard(this.checked)"/>Enable keyboard shortcuts
+	<span style="font-size:12px">(prevents normal keyboard behavior)</span><br/>
+	<input type="checkbox" id="mousebuttons" onclick="toggleMouseButtons(this.checked)"/>Switch left and right mouse buttons
+      	<span style="font-size:12px">(or switch touch behavior)</span></p>
+    </div>
+  </td> 
+</tr>
+<tr>
+  <td>
+    &nbsp;Animation&nbsp;speed:&nbsp;<input type="range" id="animspeed" oninput="setSpeed(this.value)" step="1" min="1" max="10" value="4"/>&nbsp;=&nbsp;<span id="animspeedtext" style="font-family:monospace">4</span></td>
+  <td>
+    &nbsp;Color&nbsp;intensity:&nbsp;<input type="range" id="colorintens" step="0.01" min="0" max="1" value="1" oninput="setIntens(this.value)"/>
+  </td>
+</tr>
+<tr>
+  <td colspan="3">
+    <div id="puzzles"><p>List of computed puzzles: <button onclick="clearPuzzles()">Clear</button></p></div>
+    <div id="debug" hidden></div>
+  </td>
+</tr>
+</table>
+<canvas id="textcanvas" width="32" height="32" hidden></canvas>
+</body> 
+
+</html>

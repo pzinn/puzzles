@@ -1,0 +1,90 @@
+/* inspired from
+http://javascript-array.com/scripts/simple_drop_down_menu/#
+see also
+http://www.w3schools.com/cssref/tryit.asp?filename=trycss_sel_hover_dropdown
+from a pure css dropdown menu
+*/
+
+
+.menu-title
+{
+	margin: 0 0 0 0;
+	padding: 4px 10px;
+	width: 100px;
+	background: #5970B2;
+	color: #FFF;
+	text-align: center;
+	text-decoration: none;
+	font: bold 16px arial;
+        cursor: pointer;
+        user-select:none;
+        -webkit-user-select:none;
+	-ms-user-select: none;
+	-moz-user-select: none;
+}
+
+.menu-title-active
+{
+	margin: 0 0 0 0;
+	padding: 4px 10px;
+	width: 100px;
+	background: #49A3FF;
+	color: #FFF;
+	text-align: center;
+	text-decoration: none;
+	font: bold 16px arial;
+	/*        cursor: pointer;*/
+	cursor: default;
+        user-select:none;
+        -webkit-user-select:none;
+	-ms-user-select: none;
+	-moz-user-select: none;
+}
+
+.menu
+{	margin: 0;
+	padding: 0;
+	list-style: none;
+	float: left;
+	position: absolute;
+	background: #EAEBD8;
+	border: 1px solid #5970B2}
+
+.menu li
+{	position: relative;
+        display: block;
+        margin: 0;
+        padding: 5px 10px;
+        width: auto;
+        white-space: nowrap;
+        text-align: left;
+        text-decoration: none;
+        background: #EAEBD8;
+        color: #2875DE;
+        cursor: pointer;
+        user-select:none;
+        -webkit-user-select:none;
+	-ms-user-select: none;
+	-moz-user-select: none;
+        font: 11px arial}
+
+.menu li:hover
+{	background: #49A3FF;
+	color: #FFF}
+
+
+.info { display:none; color:#0000aa; }
+
+
+.menu li:hover .info {
+    display:block;
+    position:absolute;
+    top: 0px; left:190px;
+    width:100px;
+    border:2px solid #0cf;
+    background-color:#cff; color:#000;
+    text-align: center;
+    padding:5px;
+    white-space: normal;
+ }
+

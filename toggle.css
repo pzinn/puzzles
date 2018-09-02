@@ -1,0 +1,51 @@
+.toggle-button {
+    cursor: pointer;
+    user-select: none; -webkit-user-select: none; -ms-user-select: none; -moz-user-select: none;
+}
+
+.toggle-button .toggle-internal {
+    background-color: white;
+    margin: 2px 4px;
+    vertical-align: middle;
+    border-radius: 12px;
+    border: 2px solid #D0D0D0;
+    height: 12px;
+    width: 30px;
+    position: relative; /*top: 2px;*/
+    display: inline-block;
+}
+.toggle-button .toggle-internal button {
+    cursor: pointer;
+    outline: 0;
+    display:block;
+    position: absolute;
+    left: 0; top: 0;
+    border-radius: 100%;
+    width: 14px;
+    height: 14px;
+    background-color: white;
+    float: left;
+    margin: -1px 0 0 -1px;
+    border: 2px solid #D0D0D0;
+    transition: left 0.3s;
+}
+.toggle-button-selected .toggle-internal { background-color: #83B152; border: 2px solid #7DA652; }
+.toggle-button-selected .toggle-internal button { left: 18px; top: 0; margin: 0; border: none; width: 12px; height: 12px; box-shadow: 0 0 4px rgba(0,0,0,0.1); }
+
+.complement-false button
+{
+    font: 10px arial;
+    background: #FFFFFF;
+    color: #000000; 
+    cursor: pointer;
+}
+.complement-true button
+{
+    font: 10px arial;
+    background: #000000;
+    color: #FFFFFF;
+    cursor: pointer;
+}
+
+
+				      
