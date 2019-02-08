@@ -519,7 +519,7 @@ function processAnimFunc()
 	if (res==-1) // new puzzle
 	{
 	    npuzzles++;
-	    createButton(npuzzles,buildScene({},true),but).state.parts=parts; // insert before but if !==null. add "parts" to state...
+	    createButton(npuzzles,buildScene({},true),but,buildUrl()).state.parts=parts; // insert before but if !==null. add "parts" to state... should be done in create button, of course
 	    // debug
 	    if (document.getElementById('debug').getAttribute('hidden')==null) dump();// careful, returns "" if hidden, null if not	    
 	    // end debug
@@ -602,12 +602,20 @@ function endAnim() // end of process animation, either forcefully or because ran
 }
 
 
-function createButton(text,graph,before) // creates a button which secretly contains all the graphical info to draw a puzzle
+function openAssoc(e)
+{
+    e.preventDefault();
+    window.open(this.url);
+}
+
+function createButton(text,graph,before,url="") // creates a button which secretly contains all the graphical info to draw a puzzle
 {                                        // a bit risky because if somehow the buttons gets recreated, info will be lost 
     var para=document.getElementById('currentpara');
     var but=document.createElement('button');
 
     but.onclick=loadPuzzle;
+    but.url=url;
+    but.onauxclick=openAssoc;
     but.state=graph; // !
     if (text=='*')
 	but.appendChild(icon);
@@ -979,6 +987,22 @@ function updateCoords() // try to find new coordinates of vertices using known e
 	}
     }
     while (ncoords>ncoords0);
+}
+
+function buildUrl() // build an url to call the associativity thing
+{
+    var url="../assoc/?n="+size+"&hcol=";
+    for (i=1; i<=size+1; i++)
+	for (j=1; j<=size; j++)
+	    if (i+j<=size+1)
+		url+=(edge[i][j][0])+","; else url+=((edge[i][j][0]+2)%4)+",";
+    url+="&vcol=";
+    for (i=1; i<=size; i++)
+	for (j=1; j<=size+1; j++)
+	    if (i+j<=size+1)
+		url+=((edge[i][j][1]%3)+1)+","; else url+=((1<<(edge[i][j][1]-1))-1)+",";
+    
+    return url;
 }
 
 function buildScene(graph,init,center) // convert a puzzle (array of edge states) into graphical data (graph)
