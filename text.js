@@ -51,7 +51,7 @@ function textSampler(txt)
     //texture
     var texture=gl.createTexture();
     gl.activeTexture(gl.TEXTURE0+text.length); // ewww but apparently that's standard. texture is now last
-    gl.bindTexture(gl.TEXTURE_2D, texture); // in principle don't need to bind all at all times -- it's okay as long as there are not more than 32 bound ones
+    gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textcanvas); // This is the important line!
     gl.generateMipmap(gl.TEXTURE_2D);
 

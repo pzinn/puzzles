@@ -168,16 +168,19 @@ void main(void)
     </div>
     <div id="sizes-section" hidden>
       <br/>
-      <div><input type="range" id="heightrange" onchange="setSize('height',this.value)" step="1" min="1" max="10" value="2"/> height&nbsp;=&nbsp;<span id="height">2</span></div>
-      <div><input type="range" id="widthrange" onchange="setSize('width',this.value)" step="1" min="1" max="10" value="2"/> width&nbsp;=&nbsp;<span id="width">2</span></div>
+      <div><input type="range" id="heightrange" onchange="setSize('height',this.value)" step="1" min="1" max="20" value="2"/> height&nbsp;=&nbsp;<span id="height">2</span></div>
+      <div><input type="range" id="widthrange" onchange="setSize('width',this.value)" step="1" min="1" max="20" value="2"/> width&nbsp;=&nbsp;<span id="width">2</span></div>
+      <div><input type="range" id="heightrange2" onchange="setSize('height2',this.value)" step="1" min="1" max="20" value="2"/> height 2&nbsp;=&nbsp;<span id="height2">2</span></div>
+      <div><input type="range" id="widthrange2" onchange="setSize('width2',this.value)" step="1" min="1" max="20" value="2"/> width 2&nbsp;=&nbsp;<span id="width2">2</span></div>
       <span class="toggle-button" id="doubletoggle" onchange="toggleDouble(this.checked)">double puzzle</span>
+      <span class="toggle-button" id="symtoggle" onchange="toggleSym(this.checked)">symmetric puzzle</span>
     </div>
     <div id="tiles-section" hidden>
       <ul style="list-style:none;padding:0">
       <li class="toggle-button" id="Ktoggle">K-tile</li>
       <li class="toggle-button" id="Kinvtoggle">180&deg; K-tile</li>
       <li class="toggle-button" id="equivtoggle">equivariant tile</li>
-      <li class="toggle-button" id="nondegtoggle" hidden>nondegenerate tiles</li>
+      <li class="toggle-button" id="nondegtoggle">nondegenerate tiles</li>
       <li class="toggle-button" id="equiv2toggle">120&deg; equivariant tile</li>
       <li class="toggle-button" id="equiv3toggle">240&deg; equivariant tile</li>
     </ul>
@@ -186,6 +189,14 @@ void main(void)
       <ul>
 	<li>The <a href="./?height=5&width=4&y1=3,2,1,1&y2=3,1&y3=4,3,2,1,1&y3comp&process">example</a> from my <a href="http://www.lpthe.jussieu.fr/~pzinn/semi/berkeley.pdf">Berkeley lectures</a>.</li>
 	<li>How many lines in 3-space intersect 4 given lines in general position? <a href="./?height=2&width=2&y1=1&y2=1&y3=1&y4=1&process">Answer</a>...</li>
+	<li>Part of a series, mosaic style:
+	  <ul>
+	    <li><a href="./?height=2&width=2&y1=1&y2=1&y3=1&y4=1&view=1">4 lines in 3-space</a></li>
+	    <li><a href="./?height=2&width=3&height2=4&width2=6&y1=1&y2=4,3,1&y3=1&y4=4,3,1&view=1">6 planes in 4-space</a> (<a href="./?height=4&width=6&y1=4,3,1&y2=4,3,1&y3=4,3,1&view=1">alternate</a>)</li>
+	    <li><a href="./?height=2&width=4&height2=6&width2=12&y1=1&y2=9,8,5,4,1&y3=1&y4=9,8,5,4,1&view=1">8 3-spaces in 5-space</a></li>
+	    <li><a href="./?height=2&width=5&height2=8&width2=20&y1=1&y2=16,15,11,10,6,5,1&y3=1&y4=16,15,11,10,6,5,1&view=1">10 4-spaces in 6-space</a></li>
+	  </ul>
+	</li>
       </ul>
       </div>
     <div id="help-section" hidden>
@@ -242,7 +253,7 @@ void main(void)
 	<li><button onclick="rotate90()">enter</button> rotate 90&deg; in the plane orthogonal to the projection plane</li>
 	<li>&larr; and &rarr; for previous/next puzzle, &uarr; and &darr; for previous/next series.
       </ul>
-      <p><input type="checkbox" id="keyboard" checked onclick="toggleKeyboard(this.checked)"/>Enable keyboard shortcuts
+      <p><input type="checkbox" checked id="keyboard" onclick="toggleKeyboard(this.checked)"/>Enable keyboard shortcuts
 	<span style="font-size:12px">(prevents normal keyboard behavior)</span><br/>
 	<input type="checkbox" id="mousebuttons" onclick="toggleMouseButtons(this.checked)"/>Switch left and right mouse buttons
       	<span style="font-size:12px">(or switch touch behavior)</span></p>

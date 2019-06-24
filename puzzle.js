@@ -2,6 +2,9 @@
 // remove table completely?
 // pointer has inconsistent shape on canvas
 // manual editing vs aspect ratio <----------
+//
+// make double puzzle have arbitrary shape: k1,size1/k2,size2
+
 
 // general purpose functions
 Object.prototype.clone = function() {
@@ -519,7 +522,7 @@ function processAnimFunc()
 	if (res==-1) // new puzzle
 	{
 	    npuzzles++;
-	    createButton(npuzzles,buildScene({},true),but,buildUrl()).state.parts=parts; // insert before but if !==null. add "parts" to state... should be done in create button, of course
+	    createButton(npuzzles,buildScene({},true),but).state.parts=parts; // insert before but if !==null. add "parts" to state...
 	    // debug
 	    if (document.getElementById('debug').getAttribute('hidden')==null) dump();// careful, returns "" if hidden, null if not	    
 	    // end debug
@@ -547,8 +550,21 @@ function makeCurrent(but) // make a puzzle the currently viewed one
 	    document.getElementById("widthrange").value=parts[1];
 	    document.getElementById("height").innerHTML=parts[0]; // sadly, onchange doesn't work.....
 	    document.getElementById("width").innerHTML=parts[1];
-	    update('doubletoggle',parts.length==6);
-	    resetYoung(parts.slice(2));
+	    if (parts.length==8)
+	    {
+		document.getElementById("heightrange2").value=parts[2]; 
+		document.getElementById("widthrange2").value=parts[3];
+		document.getElementById("height2").innerHTML=parts[2]; // sadly, onchange doesn't work.....
+		document.getElementById("width2").innerHTML=parts[3];
+		update('doubletoggle',true);
+		resetYoung(parts.slice(4));
+	    }
+	    else
+	    {
+		update('doubletoggle',false);
+		resetYoung(parts.slice(2));
+	    }
+	    
 	    for (var i=0; i<4; i++)
                 if (document.getElementById("y"+(i+1)+"comp").checked)
                     y[i].set(y[i].complement().get()); //ewww
@@ -602,20 +618,12 @@ function endAnim() // end of process animation, either forcefully or because ran
 }
 
 
-function openAssoc(e)
-{
-    e.preventDefault();
-    window.open(this.url);
-}
-
-function createButton(text,graph,before,url="") // creates a button which secretly contains all the graphical info to draw a puzzle
+function createButton(text,graph,before) // creates a button which secretly contains all the graphical info to draw a puzzle
 {                                        // a bit risky because if somehow the buttons gets recreated, info will be lost 
     var para=document.getElementById('currentpara');
     var but=document.createElement('button');
 
     but.onclick=loadPuzzle;
-    but.url=url;
-    but.onauxclick=openAssoc;
     but.state=graph; // !
     if (text=='*')
 	but.appendChild(icon);
@@ -682,10 +690,11 @@ var shft=[ // increments of 4d coords corresponding to edge states
     
 var y=new Array(4); // partitions
 // variables for puzzle calculation. they are set by process() 
-var size1; var size2;
-var size; // size of young diagram/puzzle (the ones currently processed, not! currently displayed) 
-var edge; // triple array of edge states. edge[i=0...size+2,j=0..size+2,ori=0..2] (i+j<=size+2): 0=undefined, 1=-, 2=+, 3=0, 4=0bar, 5 & 6 = extra undegen
+var size1,size2,size1b,size2b;
+var size,sizeb; // size=size1+size2 of young diagram/puzzle (the ones currently processed, not! currently displayed) 
+var edge; // triple array of edge states. edge[i=0...size+2,j=0..sizeb+2,ori=0..2] (i+j<=size+2): 0=undefined, 1=-, 2=+, 3=0, 4=0bar, 5 & 6 = extra undegen
 var doublePuzzle=false;
+var symPuzzle=false;
 // or by initPuzzle()
 var t;
 var npuzzles;
@@ -699,9 +708,9 @@ function initPuzzle() // start the creation of all puzzles with given constraint
     // make a stack of edges that are not fixed yet
     varedge=new Array();
     for (i=1; i<=size+1; i++)
-	for (j=1; doublePuzzle ? j<=size+1 : j<=size+1-i; j++)
+	for (symPuzzle ? j=i : j=1; doublePuzzle ? j<=sizeb+1 : j<=size+1-i; j++)
 	    for (k=0; k<3; k++)
-		if ((k==1 || j<size+1) && (k==0 || i<size+1)) // only for doublePuzzle really
+		if ((k==1 || j<sizeb+1) && (k==0 || i<size+1) && ( !symPuzzle || j>i || k!=1 )) // only for doublePuzzle really
 		    if (edge[i][j][k]===0)
 			varedge.push([i,j,k]);
 
@@ -777,6 +786,7 @@ function makePuzzle() // one step in the making of a puzzle
 
     function findnext(i,j,k,l) // used internally by makePuzzle: sets a new edge if possible, or unset it if not
     {
+	if (symPuzzle && i==j && k==2 && l<=2) l=3;
 	var lmax;
 	if (k==2)
 	{
@@ -785,7 +795,7 @@ function makePuzzle() // one step in the making of a puzzle
 	}
 	else if (k==1)
 	{
-	    if (j>1 && j<size+1) lmax=numedges; else lmax=2;
+	    if (j>1 && j<sizeb+1) lmax=numedges; else lmax=2;
 	    while (l<=lmax && quadedge[1][l][edge[i][j][0]][edge[i][j][2]][edge[i+1][j-1][0]][edge[i][j-1][2]]==0) l++;
 	}
 	else if (k==0)
@@ -793,7 +803,7 @@ function makePuzzle() // one step in the making of a puzzle
 	    if (i>1 && i<size+1) lmax=numedges; else lmax=2;
 	    while (l<=lmax && quadedge[0][l][edge[i][j][2]][edge[i][j][1]][edge[i-1][j][2]][edge[i-1][j+1][1]]==0) l++;
 	}
-	if  (l<=lmax) { edge[i][j][k]=l; return true; } else { edge[i][j][k]=0; return false; }
+	if  (l<=lmax) { edge[i][j][k]=l; if (symPuzzle) edge[j][i][k==2?2:1-k]=l<=2?3-l:l; return true; } else { edge[i][j][k]=0; if (symPuzzle) edge[j][i][k==2?2:1-k]=0; return false; }
     }
 
     // we want to fix a new edge: find which has fewest possibilities
@@ -810,7 +820,7 @@ function makePuzzle() // one step in the making of a puzzle
 	    c=quadedge[0][0][edge[i][j][2]][edge[i][j][1]][edge[i-1][j][2]][edge[i-1][j+1][1]]; // edge[i][j][0] SHOULD be zero
 	if (c<cmin) { cmin=c; tmin=tt; if (c==0) break; }
     }
-    if (t==varedge.length || cmin==0 || !findnext(i=varedge[tmin][0],j=varedge[tmin][1],k=varedge[tmin][2],1))
+    if (t==varedge.length || cmin==0 || !findnext(i=varedge[tmin][0],j=varedge[tmin][1],k=varedge[tmin][2], 1))
     {
 	// backtracking
 	while (t>0)
@@ -839,25 +849,25 @@ function makePuzzle() // one step in the making of a puzzle
 	while (y1p.length>0 && y1p[y1p.length-1]==0) y1p.pop();
 
 	y2p=[];
-	for (i=size; i>=1; i--)
-	    if (edge[1][i][0]==1) y2p.push(i-size1+y2p.length);
-	if (y2p.length!=size1) return 1;
+	for (i=sizeb; i>=1; i--)
+	    if (edge[1][i][0]==1) y2p.push(i-size1b+y2p.length);
+	if (y2p.length!=size1b) return 1;
 	while (y2p.length>0 && y2p[y2p.length-1]==0) y2p.pop();
 
 	if (doublePuzzle)
 	{
 	    y3p=[];
 	    for (i=size; i>=1; i--)
-		if (edge[i][size+1][1]==1) y3p.push(i-size1+y3p.length);
+		if (edge[i][sizeb+1][1]==1) y3p.push(i-size1+y3p.length);
 	    if (y3p.length!=size1) return 1;
 	    while (y3p.length>0 && y3p[y3p.length-1]==0) y3p.pop();
 
 	    y4p=[];
-	    for (i=1; i<=size; i++)
-		if (edge[size+1][i][0]==1) y4p.push(size-i-size1+1+y4p.length);
-	    if (y4p.length!=size1) return 1;
+	    for (i=1; i<=sizeb; i++)
+		if (edge[size+1][i][0]==1) y4p.push(sizeb-i-size1b+1+y4p.length);
+	    if (y4p.length!=size1b) return 1;
 	    while (y4p.length>0 && y4p[y4p.length-1]==0) y4p.pop();	    
-	    parts=[size1,size2,y1p,y2p,y3p,y4p];
+	    parts=[size1,size2,size1b,size2b,y1p,y2p,y3p,y4p];
 	    return -1;
 	}
 	else
@@ -888,12 +898,12 @@ function initCoords(center)
 {
     var i,j,framelen;
     // first make a big empty table of vertex indices
-    vind=new Array(size+2); for (i=0; i<=size+1; i++) vind[i]=new Array(size+2); // vind[i][j] === undefined. indices = matrix style 1..size+1
+    vind=new Array(size+2); for (i=0; i<=size+1; i++) vind[i]=new Array(sizeb+2); // vind[i][j] === undefined. indices = matrix style 1..size+1
 
     // arbitrarily set the coordinate of one vertex
     if (center) // if coordinates are gonna be centered we don't worry too much
     {
-	i=1; j=1; while ((i<=size)&&(edge[i][j][0]==0)&&(edge[i][j][1]==0)) { j++; if (j>size) {j=1; i++;} } // find a vertex adjacent to an occupied edge
+	i=1; j=1; while ((i<=size)&&(edge[i][j][0]==0)&&(edge[i][j][1]==0)) { j++; if (j>sizeb) {j=1; i++;} } // find a vertex adjacent to an occupied edge
 	vind[i][j]=0;
 	coords=[0,0,0,0]; ncoords=1; // ncoords=coords.length/4;
     }
@@ -901,19 +911,19 @@ function initCoords(center)
     { // if not, it's harder: we're gonna use the frame
 	if (doublePuzzle)
 	{
-	    coords=[
-		size1/2,-size1/2,size2/2,-size2/2,
-		-size1/2,-size1/2,size2/2,-size2/2,
-		-size1/2,-size1/2,-size2/2,-size2/2,
-		-size1/2,size1/2,-size2/2,-size2/2,
-		-size1/2,size1/2,-size2/2,size2/2,
-		size1/2,size1/2,-size2/2,size2/2,
-		size1/2,size1/2,size2/2,size2/2,
-		size1/2,-size1/2,size2/2,size2/2
+	    coords=[ // FIX. TODO
+		size1/2,-size1b/2,size2/2,-size2b/2,
+		-size1/2,-size1b/2,size2/2,-size2b/2,
+		-size1/2,-size1b/2,-size2/2,-size2b/2,
+		-size1/2,size1b/2,-size2/2,-size2b/2,
+		-size1/2,size1b/2,-size2/2,size2b/2,
+		size1/2,size1b/2,-size2/2,size2b/2,
+		size1/2,size1b/2,size2/2,size2b/2,
+		size1/2,-size1b/2,size2/2,size2b/2
 	    ];
 	    vind[1][1]=2;
-	    vind[1][size+1]=4;
-	    vind[size+1][size+1]=6;
+	    vind[1][sizeb+1]=4;
+	    vind[size+1][sizeb+1]=6;
 	    vind[size+1][1]=0;
 	}
 	else
@@ -934,32 +944,21 @@ function initCoords(center)
 	framelen=ncoords=coords.length/4;
 	for (j=0; j<framelen/2; j++)
 	{
-	    // arrow body
+	    // now determine the tip of the arrow: should depend on how one reads diagrams
 	    for (i=0; i<4; i++)
 		coords.push(coords[4*(j*2+1)+i]+0.1*coords[4*((j*2+2)%framelen)+i]);
-	    //	coords.push(0.65*coords[4*(j*2)+i]+0.5*coords[4*((j*2+2)%framelen)+i]);
 	    for (i=0; i<4; i++)
-		coords.push(coords[4*(j*2+1)+i]+0.1*coords[4*(j*2)+i]);
-	    //  coords.push(0.5*coords[4*(j*2)+i]+0.65*coords[4*((j*2+2)%framelen)+i]);
-	    // now determine the tip of the arrow: should depend on how one reads diagrams. reverse tip
+		coords.push(coords[4*(j*2+1)+i]+0.1*coords[4*(j*2)+i]);	    
 	    for (i=0; i<4; i++)
 		coords.push(coords[4*(j*2+1)+i]+0.05*coords[4*(j*2)+i]);
-	    //
 	    for (i=0; i<4; i++)
 		coords.push(coords[4*(j*2+1)+i]+0.05*coords[4*((j*2+2)%framelen)+i]+0.1*coords[4*(j*2)+i]); 
-	    //
-	    // default tip
 	    for (i=0; i<4; i++)
 		coords.push(coords[4*(j*2+1)+i]+0.05*coords[4*((j*2+2)%framelen)+i]);
-	    //  coords.push(0.6*coords[4*(j*2)+i]+0.5*coords[4*((j*2+2)%framelen)+i]);
 	    for (i=0; i<4; i++)
 		coords.push(coords[4*(j*2+1)+i]+0.05*coords[4*(j*2)+i]+0.1*coords[4*((j*2+2)%framelen)+i]);
-	    //	coords.push(0.65*coords[4*(j*2)+i]+0.55*coords[4*((j*2+2)%framelen)+i]);
-	    // location of label
 	    for (i=0; i<4; i++)
-		coords.push(coords[4*(j*2+1)+i]+0.15*coords[4*(j*2)+i]+0.15*coords[4*((j*2+2)%framelen)+i]);
-	    //  coords.push(0.5*coords[4*(j*2)+i]+0.5*coords[4*((j*2+2)%framelen)+i]+0.15*coords[4*(j*2)+i]+0.15*coords[4*((j*2+2)%framelen)+i]);
-	    //
+		coords.push(coords[4*(j*2+1)+i]+0.15*coords[4*(j*2)+i]+0.15*coords[4*((j*2+2)%framelen)+i]); // location of label
 	    ncoords+=7;
 	}
     }
@@ -973,7 +972,7 @@ function updateCoords() // try to find new coordinates of vertices using known e
     do {
 	ncoords0=ncoords;
 	for (i=1; i<=size+1; i++)
-	    for (j=1; j<=size+2; j++)
+	    for (j=1; j<=sizeb+2; j++)
 		if (vind[i][j]===undefined)
 	{
 	    vind[i][j]=ncoords; ncoords++; // just in case...
@@ -987,22 +986,6 @@ function updateCoords() // try to find new coordinates of vertices using known e
 	}
     }
     while (ncoords>ncoords0);
-}
-
-function buildUrl() // build an url to call the associativity thing
-{
-    var url="../assoc/?n="+size+"&hcol=";
-    for (i=1; i<=size+1; i++)
-	for (j=1; j<=size; j++)
-	    if (i+j<=size+1)
-		url+=(edge[i][j][0])+","; else url+=((edge[i][j][0]+2)%4)+",";
-    url+="&vcol=";
-    for (i=1; i<=size; i++)
-	for (j=1; j<=size+1; j++)
-	    if (i+j<=size+1)
-		url+=((edge[i][j][1]%3)+1)+","; else url+=((1<<(edge[i][j][1]-1))-1)+",";
-    
-    return url;
 }
 
 function buildScene(graph,init,center) // convert a puzzle (array of edge states) into graphical data (graph)
@@ -1077,7 +1060,7 @@ function buildScene(graph,init,center) // convert a puzzle (array of edge states
 	    addGraph(graph,gl.LINES,[r,r+1,r+1,r+2,r+1,r+3],16+msk,[0,0,0,1],1);
 	    msk=2*msk;
 	    addGraph(graph,gl.LINES,[r,r+1,r,r+4,r,r+5],16+msk,[0,0,0,1],1);
-	    msk=2*msk;
+	    msk=2*msk;	    
 	    addGraph(graph,gl.POINTS,[r+6],16,null,20.*size,textSampler(greek[j])); // last param = # of sampler.
 	    r+=7;
 	}
@@ -1088,7 +1071,7 @@ function buildScene(graph,init,center) // convert a puzzle (array of edge states
     var a,b;
     // for now: draw all edges labelled 1,2. could try to be more subtle.
     for (i=1; i<=size+1; i++) 
-	for (j=1; j<=size+1; j++)
+	for (j=1; j<=sizeb+1; j++)
 	    for (k=0; k<3; k++)
 		if (edge[i][j][k]>0)
     {
@@ -1107,51 +1090,51 @@ function buildScene(graph,init,center) // convert a puzzle (array of edge states
 		}
 	    // if edge is on the boundary of drawn zone, add little point
 	    if (edge[i][j][0]==0||edge[i][j][1]==0||edge[i][j][2]==0||((k==0)&&(edge[i-1][j+1][1]==0||edge[i-1][j][2]==0))||((k==1)&&(edge[i+1][j-1][0]==0||edge[i][j-1][2]==0))||((k==2)&&(edge[i+1][j][0]==0||edge[i][j+1][1]==0)))
-		pointlist[pointtype[k][edge[i][j][k]-1]].push(m);
+		pointlist[pointtype[k][edge[i][j][k]-1]].push(m);	    
 	    // edge labelling (traditional)
 	    if (edge[i][j][k]<=3)
 		addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],1024,[0,0,0,1],90,textSampler(edge[i][j][k]==3?10:edge[i][j][k]-1));
 	    if (!center)
 	    {
-		// edge numbering (for honeycombs)
-		if (edge[i][j][k]==1) // honeycomb (green)
+	    // edge numbering (for honeycombs)
+	    if (edge[i][j][k]==1) // honeycomb (green)
+	    {
+		if (k==0)
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*a+3]-coords[4*vind[1][1]+3])));
+		else if (k==1)
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[size+1][1]+3]+coords[4*vind[size+1][1]+2]-(coords[4*a+3]+coords[4*a+2]))));
+		else
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[size+1][1]+2]-coords[4*a+2])));
+	    }
+	    else if (edge[i][j][k]==2) // dual honeycomb (red)
+	    {
+		if (k==0)
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[1][size+1]]+coords[4*vind[1][size+1]+1]-(coords[4*a]+coords[4*a+1]))));
+		else if (k==1)
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*a]-coords[4*vind[1][1]])));
+		else
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[1][size+1]+1]-coords[4*a+1])));
+	    }
+	    /*
+	    else if (edge[i][j][k]==3) // both honeycomb numberings
+	    {
+		if (k==0)
 		{
-		    if (k==0)
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*a+3]-coords[4*vind[1][1]+3])));
-		    else if (k==1)
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[size+1][1]+3]+coords[4*vind[size+1][1]+2]-(coords[4*a+3]+coords[4*a+2]))));
-		    else
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[size+1][1]+2]-coords[4*a+2])));
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*a+3]-coords[4*vind[1][1]+3])));
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[1][size]]+coords[4*vind[1][size]+1]-(coords[4*a]+coords[4*a+1]))));
 		}
-		else if (edge[i][j][k]==2) // dual honeycomb (red)
+		else if (k==1)
 		{
-		    if (k==0)
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[1][size+1]]+coords[4*vind[1][size+1]+1]-(coords[4*a]+coords[4*a+1]))));
-		    else if (k==1)
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*a]-coords[4*vind[1][1]])));
-		    else
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[1][size+1]+1]-coords[4*a+1])));
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[size][1]+3]+coords[4*vind[size][1]+2]-(coords[4*a+3]+coords[4*a+2]))));
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*a]-coords[4*vind[1][1]])));
 		}
-/* needs fixing
-		else if (edge[i][j][k]==3) // both honeycomb numberings
+		else
 		{
-		    if (k==0)
-		    {
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*a+3]-coords[4*vind[1][1]+3])));
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[1][size+1]]+coords[4*vind[1][size+1]+1]-(coords[4*a]+coords[4*a+1]))));
-		    }
-		    else if (k==1)
-		    {
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[size+1][1]+3]+coords[4*vind[size+1][1]+2]-(coords[4*a+3]+coords[4*a+2]))));
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*a]-coords[4*vind[1][1]])));
-		    }
-		    else
-		    {
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[size+1][1]+2]-coords[4*a+2])));
-			addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[1][size+1]+1]-coords[4*a+1])));
-		    }
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],256,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[size][1]+2]-coords[4*a+2])));
+		    addGraph(graph,gl.POINTS,[midpt[a+"/"+b]],512,[0,0,0,1],90,textSampler(Math.round(coords[4*vind[1][size]+1]-coords[4*a+1])));
 		}
-*/
+	    }
+	    */
 	    }
 	}
     }
@@ -1162,7 +1145,7 @@ function buildScene(graph,init,center) // convert a puzzle (array of edge states
     trilist=new Array(colors4d.length); for (i=0; i<colors4d.length; i++) trilist[i]=new Array();
     edgelist=new Array(linecolors4d.length); for (i=0; i<linecolors4d.length; i++) edgelist[i]=new Array(); // another edge list for midpoints
     for (i=1; i<=size; i++)
-	for (j=1; j<=size; j++)
+	for (j=1; j<=sizeb; j++)
     {
 	// first up-pointing triangle
 	if ((k=vind[i][j])!==undefined && (l=vind[i+1][j])!==undefined && (m=vind[i][j+1])!==undefined && (c=tritype[edge[i][j][0]][edge[i][j][1]][edge[i][j][2]])>=0)
@@ -1360,7 +1343,14 @@ function buildScene(graph,init,center) // convert a puzzle (array of edge states
 
     // set base scale
     if (doublePuzzle)
-	graph.scale=1.5/size;
+    {
+/*	if (size>sizeb)
+	    graph.scale=1.5/size;
+	else
+	    graph.scale=1.5/sizeb;
+*/
+	graph.scale=3/(size+sizeb);
+    }
     else
 	graph.scale=2.25/size;
 
@@ -1401,11 +1391,29 @@ function process() // called when one presses the button... "process"
     size2=+document.getElementById("width").innerHTML;
     size=size1+size2;
 
+    doublePuzzle=document.getElementById("doubletoggle").checked;
+    symPuzzle=document.getElementById("symtoggle").checked;
+
+    if (doublePuzzle)
+    {
+	size1b=+document.getElementById("height2").innerHTML;
+	size2b=+document.getElementById("width2").innerHTML;
+	sizeb=size1b+size2b;
+    }
+    else
+    {
+	size1b=size1;
+	size2b=size2;
+	sizeb=size;
+    }
+    
     // array of edge states. a global variable (eww) that will be used by initPuzzle/makePuzzle/buildScene
-    edge=nestedArray(2,size+3,[0,0,0]);
+    if (size>=sizeb)
+	edge=nestedArray(2,size+3,[0,0,0]);
+    else
+	edge=nestedArray(2,sizeb+3,[0,0,0]);	//ewww
 
     // make a new paragraph in the list of puzzles
-    doublePuzzle=document.getElementById("doubletoggle").checked;
     var div=document.getElementById('puzzles');
     var para=document.createElement('p');
     para.id="currentpara";
@@ -1440,10 +1448,15 @@ function process() // called when one presses the button... "process"
 	}
 	else
 	    y2p=y[1].get_padded();
-	for (i=1; i<=size; i++)
+	for (i=1; i<=sizeb; i++)
 	    edge[1][i][0]=2;
-	for (i=0; i<size1; i++)
-	    edge[1][1+y2p[i]+size1-1-i][0]=1;
+	for (i=0; i<size1b; i++)
+	    edge[1][1+y2p[i]+size1b-1-i][0]=1;
+    }
+    else if (symPuzzle)
+    {
+	for (i=1; i<=size; i++)
+	    edge[1][i][0]=3-edge[i][1][1];
     }
 	
     if (document.getElementById("y3toggle").checked)
@@ -1459,9 +1472,9 @@ function process() // called when one presses the button... "process"
 	if (doublePuzzle)
 	{
 	    for (i=1; i<=size; i++)
-		edge[i][size+1][1]=2;
+		edge[i][sizeb+1][1]=2;
 	    for (i=0; i<size1; i++)
-		edge[1+y3p[i]+size1-1-i][size+1][1]=1;
+		edge[1+y3p[i]+size1-1-i][sizeb+1][1]=1;
 	}
 	else
 	{
@@ -1482,10 +1495,10 @@ function process() // called when one presses the button... "process"
 	}
 	else
 	    y4p=y[3].get_padded();
-	for (i=1; i<=size; i++)
+	for (i=1; i<=sizeb; i++)
 	    edge[size+1][i][0]=2;
-	for (i=0; i<size1; i++)
-	    edge[size+1][size-(y4p[i]+size1-1-i)][0]=1;
+	for (i=0; i<size1b; i++)
+	    edge[size+1][sizeb-(y4p[i]+size1b-1-i)][0]=1;
     }
 
     para.innerHTML+=" ";
@@ -2143,7 +2156,7 @@ var tiles0=[[1,1,1],[2,2,2],[2,3,1],[3,1,2],[1,2,3],[4,2,1],[1,4,2],[2,1,4],[3,3
 var tiles; // like a graph thing
 function createTiles() // they're basically puzzles made of a single triangle
 {
-    size1=size2=2; size=4; // ouch! global variables!
+    size1=size2=size1b=size2b=2; size=sizeb=4; // ouch! global variables!
     doublepuzzle=false;
     edge=nestedArray(2,size+3,[0,0,0]);
 
@@ -2271,8 +2284,11 @@ function setIntens(value)
 
 function resetYoung(newy) // there should be a better way... if newy==null just keep existing values
 {
-    s1=+document.getElementById("height").innerHTML;
-    s2=+document.getElementById("width").innerHTML;
+    var s1=+document.getElementById("height").innerHTML;
+    var s2=+document.getElementById("width").innerHTML;
+    var s1b=+document.getElementById("height2").innerHTML;
+    var s2b=+document.getElementById("width2").innerHTML;
+    var doublePuzzle=document.getElementById("doubletoggle").checked;
     var yp;
     // young diagrams
     for (var i=0; i<4; i++)
@@ -2281,7 +2297,10 @@ function resetYoung(newy) // there should be a better way... if newy==null just 
 	var en=document.getElementById('y'+(i+1)+'canvas').enabled;
 	var co=document.getElementById('y'+(i+1)+'comp').checked;
 	destroyyoung('y'+(i+1));
-	y[i]=inityoung('y'+(i+1),s1,s2,20,5,en,true,co);
+	if ((doublePuzzle)&&((i==1)||(i==3)))
+	    y[i]=inityoung('y'+(i+1),s1b,s2b,20,5,en,true,co);
+	else
+	    y[i]=inityoung('y'+(i+1),s1,s2,20,5,en,true,co);
 	y[i].set(yp);
     }
 }
@@ -2289,6 +2308,22 @@ function resetYoung(newy) // there should be a better way... if newy==null just 
 function toggleDouble(val) // shouldn't be called directly
 {
     document.getElementById("y4").hidden=!val;
+    if (y[0]===undefined) return; //ewwe
+    resetYoung();
+}
+
+function toggleSym(val) // shouldn't be called directly
+{
+    document.getElementById("y2").hidden=val;
+    if (y[0]===undefined) return; //ewwe
+    var s=+document.getElementById("height").innerHTML;
+    var s2=+document.getElementById("width").innerHTML;
+    if (s2>s) s=s2;
+    document.getElementById("heightrange").value=
+    document.getElementById("widthrange").value=
+    document.getElementById("height").innerHTML=
+	document.getElementById("width").innerHTML=s;
+    resetYoung();
 }
 
 function toggleKeyboard(val)
@@ -2406,33 +2441,42 @@ function startScript()
     // create a template of all tiles
     createTiles();
 
-
-     if (gup('height')>0) size1=+gup('height'); else size1=2;
-     document.getElementById('height').innerHTML=size1;
-     document.getElementById('heightrange').value=size1; // should that be encapsulated?
-     if (gup('width')>0) size2=+gup('width'); else size2=2;
-     document.getElementById('width').innerHTML=size2;
-    document.getElementById('widthrange').value=size2;
-    if (gup('speed')>0) setSpeed(gup('speed'));
-
-     intens=gup('intens'); if (intens===null) intens=1; else document.getElementById('colorintens').value=intens;
-
     opts=['double','K','Kinv','equiv','equiv2','equiv3','nondeg'];
      for (i=0; i<opts.length; i++)
 	 update(opts[i]+"toggle",bool(gup(opts[i])));
 
+    if (gup('height')>0) size1=+gup('height'); else size1=2;
+    document.getElementById('height').innerHTML=size1;
+    document.getElementById('heightrange').value=size1; // should that be encapsulated?
+    if (gup('width')>0) size2=+gup('width'); else size2=2;
+    document.getElementById('width').innerHTML=size2;
+    document.getElementById('widthrange').value=size2;
+    if (gup('height2')>0) { size1b=+gup('height2'); update('doubletoggle',true); } else size1b=size1;
+    document.getElementById('height2').innerHTML=size1b;
+    document.getElementById('heightrange2').value=size1b; // should that be encapsulated?
+    if (gup('width2')>0) { size2b=+gup('width2'); update('doubletoggle',true); } else size2b=size2;
+    document.getElementById('width2').innerHTML=size2b;
+    document.getElementById('widthrange2').value=size2b;
+    if (gup('speed')>0) setSpeed(gup('speed'));
 
-     // make the partitions
-     for (i=1; i<=4; i++)
-     {
-	 y[i-1]=inityoung('y'+i,size1,size2,20,5,document.getElementById("y"+i+"toggle").checked,true,false); // ideally, wouldn't need this, would be like toggle buttons. TODO
-	 update('y'+i+'comp',bool(gup('y'+i+'comp')));
-	 if (update('y'+i+'toggle',bool(gup('y'+i)))) // if a partition is given, it's automatically activated -- makes sense	 
-	 {
-	     y[i-1].set(gup('y'+i).split(","));
-	     if (i==4) update('doubletoggle',true); // if 4th partition, double puzzle
-	 } 
-     }
+    intens=gup('intens'); if (intens===null) intens=1; else document.getElementById('colorintens').value=intens;
+
+    var doublePuzzle=document.getElementById("doubletoggle").checked;
+    
+    // make the partitions
+    for (i=1; i<=4; i++)
+    {
+	if (doublePuzzle&&(i==2||i==4))
+	    y[i-1]=inityoung('y'+i,size1b,size2b,20,5,document.getElementById("y"+i+"toggle").checked,true,false); // ideally, wouldn't need this, would be like toggle buttons. TODO
+	else
+	    y[i-1]=inityoung('y'+i,size1,size2,20,5,document.getElementById("y"+i+"toggle").checked,true,false); // ideally, wouldn't need this, would be like toggle buttons. TODO
+	update('y'+i+'comp',bool(gup('y'+i+'comp')));
+	if (update('y'+i+'toggle',bool(gup('y'+i)))) // if a partition is given, it's automatically activated -- makes sense	 
+	{
+	    y[i-1].set(gup('y'+i).split(","));
+	    if (i==4) update('doubletoggle',true); // if 4th partition, double puzzle
+	} 
+    }
 
      // view
      mrot=new Matrix(mrot0[+gup('view')]);
