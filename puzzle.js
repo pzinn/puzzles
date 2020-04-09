@@ -1,4 +1,5 @@
 // TODO
+// the interface objects should have more natural update functions -- see comments in code
 // remove table completely?
 // pointer has inconsistent shape on canvas
 // manual editing vs aspect ratio <----------
@@ -459,7 +460,7 @@ var shortenAnimFlag; // only well-defined when processAnimFunc is running
 function processDelay() 
 { 
     if (shortenAnimFlag) return 0;
-    var as=+document.getElementById("animspeed").value;
+    var as=+document.getElementById("speed").value;
     if (as>9) return 0; else return 1000*(1/(1+as)-0.095);
 }
 
@@ -547,7 +548,7 @@ function makeCurrent(but) // make a puzzle the currently viewed one
 	    document.getElementById("widthrange").value=parts[1];
 	    document.getElementById("height").innerHTML=parts[0]; // sadly, onchange doesn't work.....
 	    document.getElementById("width").innerHTML=parts[1];
-	    update('doubletoggle',parts.length==6);
+	    updateparam('double',parts.length==6);
 	    resetYoung(parts.slice(2));
 	    for (var i=0; i<4; i++)
                 if (document.getElementById("y"+(i+1)+"comp").checked)
@@ -716,35 +717,35 @@ function initPuzzle() // start the creation of all puzzles with given constraint
     var uptriedge=[[1,1,1],[2,2,2],[1,2,3],[2,3,1],[3,1,2]]; 
     var downtriedge=[[1,1,1],[2,2,2],[1,2,3],[2,3,1],[3,1,2]]; 
 
-    if (document.getElementById("nondegtoggle").checked)
+    if (document.getElementById("nondeg").checked)
     {
 	uptriedge.push([1,3,5]);
 	downtriedge.push([1,3,5]);
 	uptriedge.push([3,2,6]);
 	downtriedge.push([3,2,6]);
     }
-    if (document.getElementById("equivtoggle").checked)
+    if (document.getElementById("equiv").checked)
     {
 	uptriedge.push([2,1,4]);
 	downtriedge.push([2,1,4]);
     }
-    if (document.getElementById("equiv2toggle").checked)
+    if (document.getElementById("equiv2").checked)
     {
 	uptriedge.push([4,2,1]);
 	downtriedge.push([4,2,1]);
     }
-    if (document.getElementById("equiv3toggle").checked)
+    if (document.getElementById("equiv3").checked)
     {
 	uptriedge.push([1,4,2]);
 	downtriedge.push([1,4,2]);
     }
 
-    if (document.getElementById("Ktoggle").checked)
+    if (document.getElementById("K").checked)
     {
 	uptriedge.push([3,3,3]);
     }
 
-    if (document.getElementById("Kinvtoggle").checked)
+    if (document.getElementById("Kinv").checked)
     {
 	downtriedge.push([3,3,3]);
     }
@@ -1405,7 +1406,7 @@ function process() // called when one presses the button... "process"
     edge=nestedArray(2,size+3,[0,0,0]);
 
     // make a new paragraph in the list of puzzles
-    doublePuzzle=document.getElementById("doubletoggle").checked;
+    doublePuzzle=document.getElementById("double").checked;
     var div=document.getElementById('puzzles');
     var para=document.createElement('p');
     para.id="currentpara";
@@ -1489,17 +1490,17 @@ function process() // called when one presses the button... "process"
     }
 
     para.innerHTML+=" ";
-    if (document.getElementById("Ktoggle").checked)
+    if (document.getElementById("K").checked)
 	para.innerHTML+=" K";
-    if (document.getElementById("Kinvtoggle").checked)
+    if (document.getElementById("Kinv").checked)
 	para.innerHTML+=" K2";
-    if (document.getElementById("nondegtoggle").checked)
+    if (document.getElementById("nondeg").checked)
 	para.innerHTML+=" N";
-    if (document.getElementById("equivtoggle").checked)
+    if (document.getElementById("equiv").checked)
 	para.innerHTML+=" E";
-    if (document.getElementById("equiv2toggle").checked)
+    if (document.getElementById("equiv2").checked)
 	para.innerHTML+=" E2";
-    if (document.getElementById("equiv3toggle").checked)
+    if (document.getElementById("equiv3").checked)
 	para.innerHTML+=" E3";
 
     para.innerHTML+=" ";
@@ -2260,7 +2261,7 @@ function setSize(which,value)
 
 function setSpeed(value) 
 {
-    document.getElementById('animspeedtext').innerHTML= (value<10)? value : '&infin;';
+    document.getElementById('speedtext').innerHTML= (value<10)? value : '&infin;';
 }
 
 function setIntens(value)
@@ -2346,11 +2347,6 @@ function togglePartition(s,b) // shouldn't be called directly
 }
 
 
-function update(str,val) // just a shorter notation for updating toggles / complement buttons
-{
-    return document.getElementById(str).update(val); // should return val
-}
-
 // to parse URL
 function gup(name, url) {
     if (!url) url = window.location.href;
@@ -2381,6 +2377,63 @@ function doresize()
     drawScene(); // should be called automatically by the resize listener, but sadly sometimes isn't...
 }
 
+function updateparam(str,val)
+{
+    var el=document.getElementById(str);
+    if (el.tagName=="INPUT") el.value=+val;
+    else if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) el.update(bool(val)); // eww
+    else el.innerHTML=val;
+    return val;
+}
+
+var params=['height','width','speed','intens','double','K','Kinv','equiv','equiv2','equiv3','nondeg','y1comp','y2comp','y3comp','y4comp'];
+function parseURL()
+{
+    for (i=0; i<params.length; i++)
+	if (gup(params[i])!==null) updateparam(params[i],gup(params[i]));
+    size1=document.getElementById('heightrange').value=document.getElementById('height').innerHTML;
+    size2=document.getElementById('widthrange').value=document.getElementById('width').innerHTML;
+    intens=document.getElementById('intens').value;
+    setSpeed(document.getElementById('speed')); // all this is crap, obviously
+
+     // make the partitions
+     for (i=1; i<=4; i++)
+     {
+	 y[i-1]=inityoung('y'+i,size1,size2,20,5,document.getElementById("y"+i+"toggle").checked,true,false); // ideally, wouldn't need this, would be like toggle buttons. TODO
+	 if (updateparam('y'+i+'toggle',bool(gup('y'+i)))) // if a partition is given, it's automatically activated -- makes sense	 
+	 {
+	     y[i-1].set(gup('y'+i).split(","));
+	     if (i==4) updateparam('doubletoggle',true); // if 4th partition, double puzzle
+	 } 
+     }
+}
+
+function getparam(str)
+{
+    var el=document.getElementById(str);
+    if (el.tagName=="INPUT") return el.value;
+    else if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) return el.checked;
+    else return el.innerHTML;
+}
+
+function updateURL()
+{
+    var url=document.location.origin+document.location.pathname;
+    for (i=0; i<params.length; i++)
+    {
+	val=getparam(params[i]);
+	if (val!==false)
+	{
+	    if (i==0) url+="?"; else url+="&";
+	    url+=params[i]+"="+val;
+	}
+    }
+    for (i=1; i<=4; i++)
+        if (document.getElementById("y"+i+"toggle").checked)
+	    url+="&y"+i+"="+y[i-1].get().toString();
+    document.getElementById('url').value=url;
+}
+	
 // start
 function startScript() 
 {
@@ -2405,34 +2458,10 @@ function startScript()
     createIcon();
     // create a template of all tiles
     createTiles();
-
-
-     if (gup('height')>0) size1=+gup('height'); else size1=2;
-     document.getElementById('height').innerHTML=size1;
-     document.getElementById('heightrange').value=size1; // should that be encapsulated?
-     if (gup('width')>0) size2=+gup('width'); else size2=2;
-     document.getElementById('width').innerHTML=size2;
-    document.getElementById('widthrange').value=size2;
-    if (gup('speed')>0) setSpeed(gup('speed'));
-
-     intens=gup('intens'); if (intens===null) intens=1; else document.getElementById('colorintens').value=intens;
-
-    opts=['double','K','Kinv','equiv','equiv2','equiv3','nondeg'];
-     for (i=0; i<opts.length; i++)
-	 update(opts[i]+"toggle",bool(gup(opts[i])));
-
-
-     // make the partitions
-     for (i=1; i<=4; i++)
-     {
-	 y[i-1]=inityoung('y'+i,size1,size2,20,5,document.getElementById("y"+i+"toggle").checked,true,false); // ideally, wouldn't need this, would be like toggle buttons. TODO
-	 update('y'+i+'comp',bool(gup('y'+i+'comp')));
-	 if (update('y'+i+'toggle',bool(gup('y'+i)))) // if a partition is given, it's automatically activated -- makes sense	 
-	 {
-	     y[i-1].set(gup('y'+i).split(","));
-	     if (i==4) update('doubletoggle',true); // if 4th partition, double puzzle
-	 } 
-     }
+    
+    // read options
+    parseURL();
+    updateURL();
 
      // view
      mrot=new Matrix(mrot0[+gup('view')]);
@@ -2442,7 +2471,7 @@ function startScript()
      i=1;
      while (i<=maxmask)
      {
-	     update("check"+i,mask&i);
+	     updateparam("check"+i,mask&i);
 	 i=2*i;
      }
      

@@ -5,16 +5,11 @@
     font: 26px Helvetica, monospace;
 }
 
-.mytable
-{
-    padding: 0 0;
-    margin: 0 0;
-}
-
 .mytable td
 {
-    padding: 0 0;
-    margin: 0 0;
+    padding: 5px;
+    margin: 0px;
+    border: 1px solid black;
 }
 
 button
