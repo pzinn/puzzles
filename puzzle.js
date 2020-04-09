@@ -358,6 +358,8 @@ function drawScene()
     var graph=current.state;
     if (graph===undefined) return;
 
+    intens=document.getElementById('intens').value;
+    
     var i,mask;
     // recompute mask (could be done on the fly but useless optimization)
     mask=0; i=1;
@@ -2266,7 +2268,6 @@ function setSpeed(value)
 
 function setIntens(value)
 {
-    intens=value;
     drawScene();
 }
 
@@ -2387,13 +2388,18 @@ function updateparam(str,val)
 }
 
 var params=['height','width','speed','intens','double','K','Kinv','equiv','equiv2','equiv3','nondeg','y1comp','y2comp','y3comp','y4comp'];
+var defaultparams=[2,2,4,1,false,false,false,false,false,false,false,false,false,false,false];
 function parseURL()
 {
+    var val;
     for (i=0; i<params.length; i++)
-	if (gup(params[i])!==null) updateparam(params[i],gup(params[i]));
+    {
+	val=gup(params[i]);
+	if (val===null) val=defaultparams[i];
+	updateparam(params[i],val);
+    }
     size1=document.getElementById('heightrange').value=document.getElementById('height').innerHTML;
     size2=document.getElementById('widthrange').value=document.getElementById('width').innerHTML;
-    intens=document.getElementById('intens').value;
     setSpeed(document.getElementById('speed')); // all this is crap, obviously
 
      // make the partitions
@@ -2419,12 +2425,13 @@ function getparam(str)
 function updateURL()
 {
     var url=document.location.origin+document.location.pathname;
+    var flag=true;
     for (i=0; i<params.length; i++)
     {
 	val=getparam(params[i]);
-	if (val!==false)
+	if (val!=defaultparams[i])
 	{
-	    if (i==0) url+="?"; else url+="&";
+	    if (flag) { url+="?"; flag=false; } else url+="&";
 	    url+=params[i]+"="+val;
 	}
     }
