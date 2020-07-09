@@ -1,9 +1,3 @@
-// TODO
-// the interface objects should have more natural update functions -- see comments in code
-// remove table completely?
-// pointer has inconsistent shape on canvas
-// manual editing vs aspect ratio <----------
-
 // general purpose functions
 Object.prototype.clone = function() {
   var newObj = (this instanceof Array) ? [] : {};
@@ -341,11 +335,12 @@ function drawScene()
     // has changed.
     var width = precanvas.clientWidth;
     var height = precanvas.clientHeight;
-    if (canvas.width != width || canvas.height != height)
+    if (canvas.width != width-10 || canvas.height != height-10)
     {
 	// Change the size of the canvas to match the size it's being displayed
-	canvas.width = width;
-	canvas.height = height;
+	// 10 seems the minimum value to not trigger grid auto resize leading to infinite loop of size expansion
+	canvas.width = width-10;
+	canvas.height = height-10;
     }
     gl.viewport(0, 0, canvas.width, canvas.height);
     
@@ -359,7 +354,7 @@ function drawScene()
     if (graph===undefined) return;
 
     intens=document.getElementById('intens').value;
-    
+
     var i,mask;
     // recompute mask (could be done on the fly but useless optimization)
     mask=0; i=1;
@@ -2364,6 +2359,7 @@ function bool(str) // converts null or string from url to boolean
     return (str!=='false')&&((str==="")||(+str!=0));
 }
 
+/*
 function doresize()
 {
 //    document.getElementById("debug").innerHTML+="["+event.pageX+"/"+event.pageY+"]"
@@ -2377,6 +2373,7 @@ function doresize()
     }
     drawScene(); // should be called automatically by the resize listener, but sadly sometimes isn't...
 }
+*/
 
 function updateparam(str,val)
 {
@@ -2400,7 +2397,7 @@ function parseURL()
     }
     size1=document.getElementById('heightrange').value=document.getElementById('height').innerHTML;
     size2=document.getElementById('widthrange').value=document.getElementById('width').innerHTML;
-    setSpeed(document.getElementById('speed')); // all this is crap, obviously
+    setSpeed(document.getElementById('speed').value); // all this is crap, obviously
 
      // make the partitions
      for (i=1; i<=4; i++)
@@ -2496,9 +2493,9 @@ function startScript()
      canvas.addEventListener("touchcancel",handleTouchEnd,false);
      canvas.addEventListener("touchmove",handleTouchMove,false);
 
-    // resizing of window
-//    window.addEventListener('resize',drawScene);
-    addResizeListener(precanvas, drawScene); // unfortunately resize only works for windows... have to use this special package
+    //    window.addEventListener('resize',drawScene);
+    //    addResizeListener(precanvas, drawScene); // unfortunately resize only works for windows... have to use this special package
+    new ResizeObserver(drawScene).observe(precanvas);
      
      //lame... no onload for non-body elements
      document.getElementById("sizes").onclick();

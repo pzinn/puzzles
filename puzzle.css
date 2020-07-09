@@ -5,12 +5,66 @@
     font: 26px Helvetica, monospace;
 }
 
-.mytable td
+.mygrid {
+    display: grid;
+/*
+    grid-template-columns: 300px 300px 1fr;
+    grid-template-rows: 400px 400px 0.1fr;
+*/
+    /*
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 0.1fr;
+*/
+}
+
+.mygrid > div
 {
     padding: 5px;
     margin: 0px;
     border: 1px solid black;
 }
+
+#precanvas {
+    position: relative;
+    grid-column-start: 1;
+    grid-column-end: 3;
+    grid-row-start:1;
+    grid-row-end:3;
+    resize:both;
+    overflow:hidden;
+}
+
+#partitions {
+    grid-column-start: 3;
+    grid-column-end: 4;
+    grid-row-start:1;
+    grid-row-end:2;
+}
+
+#settings {
+    grid-column-start: 3;
+    grid-column-end: 4;
+    grid-row-start:2;
+    grid-row-end:4;
+}
+
+#animation {
+    grid-column-start: 1;
+    grid-column-end: 2;
+    grid-row-start:3;
+    grid-row-end:4;
+}
+
+#colorintensity {
+    grid-column-start: 2;
+    grid-column-end: 3;
+    grid-row-start:3;
+    grid-row-end:4;
+}
+
+#list {
+}    
+
 
 button
 {
@@ -20,6 +74,28 @@ button
     border-width:2px;
 }
 
+#canvas {
+    position:relative;
+    background:transparent;
+    left:0;
+    top:0;
+    z-index:1;
+}
+
+#submit {
+    position: absolute;
+    right:0px;
+    top:0px;
+    z-index:2;
+}
+
+#menuoverlay {
+    position: absolute;
+    left:0px;
+    top:0px;
+    height:0px;
+    z-index:2;
+}
 
 
 input[type=range]
