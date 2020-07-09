@@ -1394,7 +1394,7 @@ function process() // called when one presses the button... "process"
 {
     var i;
 
-    if (!document.getElementById("y1toggle").checked && !document.getElementById("y2toggle").checked && !document.getElementById("y3toggle").checked && (!document.getElementById("doubletoggle").checked || !document.getElementById("y4toggle").checked))
+    if (!document.getElementById("y1toggle").checked && !document.getElementById("y2toggle").checked && !document.getElementById("y3toggle").checked && (!document.getElementById("double").checked || !document.getElementById("y4toggle").checked))
     {
 	alert('Please specify at least one partition.');
 	return;
@@ -2409,7 +2409,7 @@ function parseURL()
 	 if (updateparam('y'+i+'toggle',bool(gup('y'+i)))) // if a partition is given, it's automatically activated -- makes sense	 
 	 {
 	     y[i-1].set(gup('y'+i).split(","));
-	     if (i==4) updateparam('doubletoggle',true); // if 4th partition, double puzzle
+	     if (i==4) updateparam('double',true); // if 4th partition, double puzzle
 	 } 
      }
 }
