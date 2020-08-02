@@ -1638,11 +1638,13 @@ function animateIcon()
 function handleKeyDown(event)
 {
     var active=document.activeElement;
-    if (active!=document.body && active.onclick!=loadPuzzle) return true;
+    if (active!=document.body && active.onclick!=loadPuzzle) return;
 
+    if (event.ctrlKey) return; // control combos shouldn't be prevented
+
+    var key=event.key;
     // we allow arrows when playing with puzzle buttons
-    var key=event.keyCode; 
-    if (key == 37) // <-
+    if (key == "ArrowLeft") // <-
     {
 	if ((but=document.getElementById("current")) && (but.previousElementSibling !== null))
 	{
@@ -1650,7 +1652,7 @@ function handleKeyDown(event)
 	    makeCurrent(but.previousElementSibling);
 	}
     }
-    else if (key == 39) // ->
+    else if (key == "ArrowRight") // ->
     {
 	if ((but=document.getElementById("current")) && (but.nextElementSibling !== null))
 	{
@@ -1658,7 +1660,7 @@ function handleKeyDown(event)
 	    makeCurrent(but.nextElementSibling);
 	}
     }
-    else if (key == 38) // up
+    else if (key == "ArrowUp") // up
     {
 	if ((but=document.getElementById("current")) && (but.parentElement.previousSibling !== null) && (but.parentElement.previousSibling.firstElementChild !== null) && (but.parentElement.previousSibling.firstElementChild.innerHTML.length == 1)) //lame
 	{
@@ -1666,7 +1668,7 @@ function handleKeyDown(event)
 	    makeCurrent(but.parentElement.previousSibling.firstElementChild);
 	}	
     }
-    else if (key == 40) // down
+    else if (key == "ArrowDown") // down
     {
 	if ((but=document.getElementById("current")) && (but.parentElement.nextSibling !== null) && (but.parentElement.nextSibling.firstElementChild !== null) && (but.parentElement.nextSibling.firstElementChild.innerHTML.length == 1))
 	{
@@ -1674,43 +1676,47 @@ function handleKeyDown(event)
 	    makeCurrent(but.parentElement.nextSibling.firstElementChild);
 	}
     }
-
-    if (active!=document.body) return true; // for the rest, only if nothing is focused do we let keys work
-
-    if (key == 32) // space 
+    else
     {
-	toggleAnimation();
-    }
-    else if (key==13) // enter
-    {
-	rotate90();
-    }
-    else if ((key>=48)&&(key<58)) // digits
-	presetView(key-48);
-    // next, debugging options
+	if (active!=document.body) return; // for the rest, only if nothing is focused do we let keys work
 
-    else if (key==68) // 'd'
+	if (key == " ") // space
 	{
-	    document.getElementById('debug').removeAttribute('hidden');
-	    if (document.getElementById('debug').innerHTML=="")
-		dump();
-	    else
-		document.getElementById('debug').innerHTML="";
+	    toggleAnimation();
 	}
-    else if (key==71) // 'g' -- green paths
-	toggleLine(1);
-    else if (key==82) // 'r' -- red paths
-	toggleLine(2);
-    else if (key==76) // 'l' -- loops
-	toggleLine(4);
-    else if (key==70) // 'f' -- frame
-	toggleLine(8);
-    else if (key==65) // 'a' -- arrows
-	toggleLine(16);
-    else if (key==80) // 'p' -- points
-	toggleLine(32);
-    else return true;
-    return false; // PREVENTS DEFAULT BEHAVIOR!
+	else if (key=="Enter") // enter
+	{
+	    rotate90();
+	}
+	else if ((key>="0")&&(key<="9")) // digits
+	    presetView(+key);
+
+	else {
+	    key=key.toUpperCase();
+	    if (key=="D") // debugging
+	    {
+		document.getElementById('debug').removeAttribute('hidden');
+		if (document.getElementById('debug').innerHTML=="")
+		    dump();
+		else
+		    document.getElementById('debug').innerHTML="";
+	    }
+	    else if (key=="G") // green paths
+		toggleLine(1);
+	    else if (key=="R") // red paths
+		toggleLine(2);
+	    else if (key=="L") // loops
+		toggleLine(4);
+	    else if (key=="F") // frame
+		toggleLine(8);
+	    else if (key=="A") // arrows
+		toggleLine(16);
+	    else if (key=="P") // points
+		toggleLine(32);
+	    else return;
+	}
+    }
+    event.preventDefault(); // prevent default behavior
 }
 
 
