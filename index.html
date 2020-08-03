@@ -86,19 +86,15 @@ void main(void)
   <script type="text/javascript" src="help.js"></script>
   <link rel="stylesheet" type="text/css" href="help.css"/>
 
-  <script type="text/javascript" src="detect-element-resize.js"></script>
-  
 </head>
 
 <body onload="initToggle();startScript();">
 
-<table border="1" class="mytable">
-<tr>
-  <td id="precanvas" style="position:relative;width:600;height:600" colspan="2">
-    <canvas id="webglcanvas" style="position:relative;background:transparent;left:0;top:0;z-index:1"></canvas>
-    <div style="position: absolute; right:0px;top:0px;z-index:2" class="menu-title" onclick="process()" id="submit">Process</div>
-    <img src="resize-11-16.png" style="position: absolute; right:0px;bottom:0px;z-index:2;cursor: pointer" ondrag="doresize()">
-    <div id="menuoverlay" style="position: absolute;left:0px;top:0px;height:0px;z-index:2">
+<div class="mygrid">
+  <div id="precanvas">
+    <canvas id="webglcanvas"></canvas>
+    <div class="menu-title" onclick="process()" id="submit">Process</div>
+    <div id="menuoverlay">
       <div id="view" class="menu-title"
 	   onmouseover="mopen('view','view-menu')" 
 	   onmouseout="mclosetime('view')"
@@ -124,8 +120,8 @@ void main(void)
 	<li class="toggle-button" id="check1024">Traditional edge labelling<span class="info">Traditional multinumber puzzle notation</span></li>
       </ul>
     </div>
-  </td>
-  <td valign="top" rowspan="2">
+</div>
+  <div id="partitions">
     <h3 class="menu-title-active">Partitions</h3>
     All partitions are read from bottom/left to top/right (toggle the arrows to see on the picture)
     <div id="y1">
@@ -156,8 +152,10 @@ void main(void)
       </span>
       <span class="label">&rho;:</span>
     </div>
-    <p><input type="checkbox" id="updateparts"/> update partitions from puzzle</p>
-    <hr/>
+    <p><input type="checkbox" checked id="updateparts"/> update partitions from puzzle</p>
+    <p>URL for these choices: <textarea rows="1" cols="50" wrap="off" onclick="updateURL();this.focus();this.select()" readonly id="url"></textarea></p>
+  </div>
+<div id="settings">
     <div id="multi">
       <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','sizes-section')" id="sizes">Sizes</span>
       <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','tiles-section')" id="tiles">Tiles</span>
@@ -172,17 +170,17 @@ void main(void)
       <div><input type="range" id="widthrange" onchange="setSize('width',this.value)" step="1" min="1" max="20" value="2"/> width&nbsp;=&nbsp;<span id="width">2</span></div>
       <div><input type="range" id="heightrange2" onchange="setSize('height2',this.value)" step="1" min="1" max="20" value="2"/> height 2&nbsp;=&nbsp;<span id="height2">2</span></div>
       <div><input type="range" id="widthrange2" onchange="setSize('width2',this.value)" step="1" min="1" max="20" value="2"/> width 2&nbsp;=&nbsp;<span id="width2">2</span></div>
-      <span class="toggle-button" id="doubletoggle" onchange="toggleDouble(this.checked)">double puzzle</span>
-      <span class="toggle-button" id="symtoggle" onchange="toggleSym(this.checked)">symmetric puzzle</span>
+      <span class="toggle-button" id="double" onchange="toggleDouble(this.checked)">double puzzle</span>
+      <span class="toggle-button" id="sym" onchange="toggleSym(this.checked)">symmetric puzzle</span>
     </div>
     <div id="tiles-section" hidden>
       <ul style="list-style:none;padding:0">
-      <li class="toggle-button" id="Ktoggle">K-tile</li>
-      <li class="toggle-button" id="Kinvtoggle">180&deg; K-tile</li>
-      <li class="toggle-button" id="equivtoggle">equivariant tile</li>
-      <li class="toggle-button" id="nondegtoggle">nondegenerate tiles</li>
-      <li class="toggle-button" id="equiv2toggle">120&deg; equivariant tile</li>
-      <li class="toggle-button" id="equiv3toggle">240&deg; equivariant tile</li>
+      <li class="toggle-button" id="K">K-tile</li>
+      <li class="toggle-button" id="Kinv">180&deg; K-tile</li>
+      <li class="toggle-button" id="equiv">equivariant tile</li>
+      <li class="toggle-button" id="nondeg" hidden>nondegenerate tiles</li>
+      <li class="toggle-button" id="equiv2">120&deg; equivariant tile</li>
+      <li class="toggle-button" id="equiv3">240&deg; equivariant tile</li>
     </ul>
     </div>
     <div id="examples-section" hidden>
@@ -258,22 +256,18 @@ void main(void)
 	<input type="checkbox" id="mousebuttons" onclick="toggleMouseButtons(this.checked)"/>Switch left and right mouse buttons
       	<span style="font-size:12px">(or switch touch behavior)</span></p>
     </div>
-  </td> 
-</tr>
-<tr>
-  <td>
-    &nbsp;Animation&nbsp;speed:&nbsp;<input type="range" id="animspeed" oninput="setSpeed(this.value)" step="1" min="1" max="10" value="4"/>&nbsp;=&nbsp;<span id="animspeedtext" style="font-family:monospace">4</span></td>
-  <td>
-    &nbsp;Color&nbsp;intensity:&nbsp;<input type="range" id="colorintens" step="0.01" min="0" max="1" value="1" oninput="setIntens(this.value)"/>
-  </td>
-</tr>
-<tr>
-  <td colspan="3">
+</div>
+<div id="animation">
+  &nbsp;Animation&nbsp;speed:&nbsp;<input type="range" id="speed" oninput="setSpeed(this.value)" step="1" min="1" max="10" value="4"/>&nbsp;=&nbsp;<span id="speedtext" style="font-family:monospace">4</span>
+</div>
+<div id="colorintensity">
+    &nbsp;Color&nbsp;intensity:&nbsp;<input type="range" id="intens" step="0.01" min="0" max="1" value="1" oninput="setIntens(this.value)"/>
+</div>
+</div>
+<div id="list">
     <div id="puzzles"><p>List of computed puzzles: <button onclick="clearPuzzles()">Clear</button></p></div>
     <div id="debug" hidden></div>
-  </td>
-</tr>
-</table>
+</div>
 <canvas id="textcanvas" width="32" height="32" hidden></canvas>
 </body> 
 

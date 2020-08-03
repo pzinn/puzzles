@@ -1,0 +1,7 @@
+initial value of anim speed inconsistent
+
+// TODO
+// the interface objects should have more natural update functions -- see comments in code
+// remove table completely?
+// pointer has inconsistent shape on canvas
+// manual editing vs aspect ratio <----------

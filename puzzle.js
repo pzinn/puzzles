@@ -1,11 +1,3 @@
-// TODO
-// remove table completely?
-// pointer has inconsistent shape on canvas
-// manual editing vs aspect ratio <----------
-//
-// make double puzzle have arbitrary shape: k1,size1/k2,size2
-
-
 // general purpose functions
 Object.prototype.clone = function() {
   var newObj = (this instanceof Array) ? [] : {};
@@ -343,11 +335,12 @@ function drawScene()
     // has changed.
     var width = precanvas.clientWidth;
     var height = precanvas.clientHeight;
-    if (canvas.width != width || canvas.height != height)
+    if (canvas.width != width-10 || canvas.height != height-10)
     {
 	// Change the size of the canvas to match the size it's being displayed
-	canvas.width = width;
-	canvas.height = height;
+	// 10 seems the minimum value to not trigger grid auto resize leading to infinite loop of size expansion
+	canvas.width = width-10;
+	canvas.height = height-10;
     }
     gl.viewport(0, 0, canvas.width, canvas.height);
     
@@ -359,6 +352,8 @@ function drawScene()
     if (current===null) return;
     var graph=current.state;
     if (graph===undefined) return;
+
+    intens=document.getElementById('intens').value;
 
     var i,mask;
     // recompute mask (could be done on the fly but useless optimization)
@@ -462,7 +457,7 @@ var shortenAnimFlag; // only well-defined when processAnimFunc is running
 function processDelay() 
 { 
     if (shortenAnimFlag) return 0;
-    var as=+document.getElementById("animspeed").value;
+    var as=+document.getElementById("speed").value;
     if (as>9) return 0; else return 1000*(1/(1+as)-0.095);
 }
 
@@ -556,15 +551,14 @@ function makeCurrent(but) // make a puzzle the currently viewed one
 		document.getElementById("widthrange2").value=parts[3];
 		document.getElementById("height2").innerHTML=parts[2]; // sadly, onchange doesn't work.....
 		document.getElementById("width2").innerHTML=parts[3];
-		update('doubletoggle',true);
+		updateparam('double',true);
 		resetYoung(parts.slice(4));
 	    }
 	    else
 	    {
-		update('doubletoggle',false);
+		updateparam('double',false);
 		resetYoung(parts.slice(2));
 	    }
-	    
 	    for (var i=0; i<4; i++)
                 if (document.getElementById("y"+(i+1)+"comp").checked)
                     y[i].set(y[i].complement().get()); //ewww
@@ -725,35 +719,35 @@ function initPuzzle() // start the creation of all puzzles with given constraint
     var uptriedge=[[1,1,1],[2,2,2],[1,2,3],[2,3,1],[3,1,2]]; 
     var downtriedge=[[1,1,1],[2,2,2],[1,2,3],[2,3,1],[3,1,2]]; 
 
-    if (document.getElementById("nondegtoggle").checked)
+    if (document.getElementById("nondeg").checked)
     {
 	uptriedge.push([1,3,5]);
 	downtriedge.push([1,3,5]);
 	uptriedge.push([3,2,6]);
 	downtriedge.push([3,2,6]);
     }
-    if (document.getElementById("equivtoggle").checked)
+    if (document.getElementById("equiv").checked)
     {
 	uptriedge.push([2,1,4]);
 	downtriedge.push([2,1,4]);
     }
-    if (document.getElementById("equiv2toggle").checked)
+    if (document.getElementById("equiv2").checked)
     {
 	uptriedge.push([4,2,1]);
 	downtriedge.push([4,2,1]);
     }
-    if (document.getElementById("equiv3toggle").checked)
+    if (document.getElementById("equiv3").checked)
     {
 	uptriedge.push([1,4,2]);
 	downtriedge.push([1,4,2]);
     }
 
-    if (document.getElementById("Ktoggle").checked)
+    if (document.getElementById("K").checked)
     {
 	uptriedge.push([3,3,3]);
     }
 
-    if (document.getElementById("Kinvtoggle").checked)
+    if (document.getElementById("Kinv").checked)
     {
 	downtriedge.push([3,3,3]);
     }
@@ -1381,7 +1375,7 @@ function process() // called when one presses the button... "process"
 {
     var i;
 
-    if (!document.getElementById("y1toggle").checked && !document.getElementById("y2toggle").checked && !document.getElementById("y3toggle").checked && (!document.getElementById("doubletoggle").checked || !document.getElementById("y4toggle").checked))
+    if (!document.getElementById("y1toggle").checked && !document.getElementById("y2toggle").checked && !document.getElementById("y3toggle").checked && (!document.getElementById("double").checked || !document.getElementById("y4toggle").checked))
     {
 	alert('Please specify at least one partition.');
 	return;
@@ -1390,9 +1384,6 @@ function process() // called when one presses the button... "process"
     size1=+document.getElementById("height").innerHTML;
     size2=+document.getElementById("width").innerHTML;
     size=size1+size2;
-
-    doublePuzzle=document.getElementById("doubletoggle").checked;
-    symPuzzle=document.getElementById("symtoggle").checked;
 
     if (doublePuzzle)
     {
@@ -1414,6 +1405,8 @@ function process() // called when one presses the button... "process"
 	edge=nestedArray(2,sizeb+3,[0,0,0]);	//ewww
 
     // make a new paragraph in the list of puzzles
+    doublePuzzle=document.getElementById("double").checked;
+    symPuzzle=document.getElementById("sym").checked;
     var div=document.getElementById('puzzles');
     var para=document.createElement('p');
     para.id="currentpara";
@@ -1502,17 +1495,17 @@ function process() // called when one presses the button... "process"
     }
 
     para.innerHTML+=" ";
-    if (document.getElementById("Ktoggle").checked)
+    if (document.getElementById("K").checked)
 	para.innerHTML+=" K";
-    if (document.getElementById("Kinvtoggle").checked)
+    if (document.getElementById("Kinv").checked)
 	para.innerHTML+=" K2";
-    if (document.getElementById("nondegtoggle").checked)
+    if (document.getElementById("nondeg").checked)
 	para.innerHTML+=" N";
-    if (document.getElementById("equivtoggle").checked)
+    if (document.getElementById("equiv").checked)
 	para.innerHTML+=" E";
-    if (document.getElementById("equiv2toggle").checked)
+    if (document.getElementById("equiv2").checked)
 	para.innerHTML+=" E2";
-    if (document.getElementById("equiv3toggle").checked)
+    if (document.getElementById("equiv3").checked)
 	para.innerHTML+=" E3";
 
     para.innerHTML+=" ";
@@ -1653,11 +1646,13 @@ function animateIcon()
 function handleKeyDown(event)
 {
     var active=document.activeElement;
-    if (active!=document.body && active.onclick!=loadPuzzle) return true;
+    if (active!=document.body && active.onclick!=loadPuzzle) return;
 
+    if (event.ctrlKey) return; // control combos shouldn't be prevented
+
+    var key=event.key;
     // we allow arrows when playing with puzzle buttons
-    var key=event.keyCode; 
-    if (key == 37) // <-
+    if (key == "ArrowLeft") // <-
     {
 	if ((but=document.getElementById("current")) && (but.previousElementSibling !== null))
 	{
@@ -1665,7 +1660,7 @@ function handleKeyDown(event)
 	    makeCurrent(but.previousElementSibling);
 	}
     }
-    else if (key == 39) // ->
+    else if (key == "ArrowRight") // ->
     {
 	if ((but=document.getElementById("current")) && (but.nextElementSibling !== null))
 	{
@@ -1673,7 +1668,7 @@ function handleKeyDown(event)
 	    makeCurrent(but.nextElementSibling);
 	}
     }
-    else if (key == 38) // up
+    else if (key == "ArrowUp") // up
     {
 	if ((but=document.getElementById("current")) && (but.parentElement.previousSibling !== null) && (but.parentElement.previousSibling.firstElementChild !== null) && (but.parentElement.previousSibling.firstElementChild.innerHTML.length == 1)) //lame
 	{
@@ -1681,7 +1676,7 @@ function handleKeyDown(event)
 	    makeCurrent(but.parentElement.previousSibling.firstElementChild);
 	}	
     }
-    else if (key == 40) // down
+    else if (key == "ArrowDown") // down
     {
 	if ((but=document.getElementById("current")) && (but.parentElement.nextSibling !== null) && (but.parentElement.nextSibling.firstElementChild !== null) && (but.parentElement.nextSibling.firstElementChild.innerHTML.length == 1))
 	{
@@ -1689,43 +1684,47 @@ function handleKeyDown(event)
 	    makeCurrent(but.parentElement.nextSibling.firstElementChild);
 	}
     }
-
-    if (active!=document.body) return true; // for the rest, only if nothing is focused do we let keys work
-
-    if (key == 32) // space 
+    else
     {
-	toggleAnimation();
-    }
-    else if (key==13) // enter
-    {
-	rotate90();
-    }
-    else if ((key>=48)&&(key<58)) // digits
-	presetView(key-48);
-    // next, debugging options
+	if (active!=document.body) return; // for the rest, only if nothing is focused do we let keys work
 
-    else if (key==68) // 'd'
+	if (key == " ") // space
 	{
-	    document.getElementById('debug').removeAttribute('hidden');
-	    if (document.getElementById('debug').innerHTML=="")
-		dump();
-	    else
-		document.getElementById('debug').innerHTML="";
+	    toggleAnimation();
 	}
-    else if (key==71) // 'g' -- green paths
-	toggleLine(1);
-    else if (key==82) // 'r' -- red paths
-	toggleLine(2);
-    else if (key==76) // 'l' -- loops
-	toggleLine(4);
-    else if (key==70) // 'f' -- frame
-	toggleLine(8);
-    else if (key==65) // 'a' -- arrows
-	toggleLine(16);
-    else if (key==80) // 'p' -- points
-	toggleLine(32);
-    else return true;
-    return false; // PREVENTS DEFAULT BEHAVIOR!
+	else if (key=="Enter") // enter
+	{
+	    rotate90();
+	}
+	else if ((key>="0")&&(key<="9")) // digits
+	    presetView(+key);
+
+	else {
+	    key=key.toUpperCase();
+	    if (key=="D") // debugging
+	    {
+		document.getElementById('debug').removeAttribute('hidden');
+		if (document.getElementById('debug').innerHTML=="")
+		    dump();
+		else
+		    document.getElementById('debug').innerHTML="";
+	    }
+	    else if (key=="G") // green paths
+		toggleLine(1);
+	    else if (key=="R") // red paths
+		toggleLine(2);
+	    else if (key=="L") // loops
+		toggleLine(4);
+	    else if (key=="F") // frame
+		toggleLine(8);
+	    else if (key=="A") // arrows
+		toggleLine(16);
+	    else if (key=="P") // points
+		toggleLine(32);
+	    else return;
+	}
+    }
+    event.preventDefault(); // prevent default behavior
 }
 
 
@@ -2273,12 +2272,11 @@ function setSize(which,value)
 
 function setSpeed(value) 
 {
-    document.getElementById('animspeedtext').innerHTML= (value<10)? value : '&infin;';
+    document.getElementById('speedtext').innerHTML= (value<10)? value : '&infin;';
 }
 
 function setIntens(value)
 {
-    intens=value;
     drawScene();
 }
 
@@ -2288,7 +2286,7 @@ function resetYoung(newy) // there should be a better way... if newy==null just 
     var s2=+document.getElementById("width").innerHTML;
     var s1b=+document.getElementById("height2").innerHTML;
     var s2b=+document.getElementById("width2").innerHTML;
-    var doublePuzzle=document.getElementById("doubletoggle").checked;
+    var doublePuzzle=document.getElementById("double").checked;
     var yp;
     // young diagrams
     for (var i=0; i<4; i++)
@@ -2381,11 +2379,6 @@ function togglePartition(s,b) // shouldn't be called directly
 }
 
 
-function update(str,val) // just a shorter notation for updating toggles / complement buttons
-{
-    return document.getElementById(str).update(val); // should return val
-}
-
 // to parse URL
 function gup(name, url) {
     if (!url) url = window.location.href;
@@ -2402,6 +2395,7 @@ function bool(str) // converts null or string from url to boolean
     return (str!=='false')&&((str==="")||(+str!=0));
 }
 
+/*
 function doresize()
 {
 //    document.getElementById("debug").innerHTML+="["+event.pageX+"/"+event.pageY+"]"
@@ -2415,7 +2409,71 @@ function doresize()
     }
     drawScene(); // should be called automatically by the resize listener, but sadly sometimes isn't...
 }
+*/
 
+function updateparam(str,val)
+{
+    var el=document.getElementById(str);
+    if (el.tagName=="INPUT") el.value=+val;
+    else if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) el.update(bool(val)); // eww
+    else el.innerHTML=val;
+    return val;
+}
+
+var params=['height','width','height2','width2','speed','intens','double','K','Kinv','equiv','equiv2','equiv3','nondeg','y1comp','y2comp','y3comp','y4comp'];
+var defaultparams=[2,2,4,1,false,false,false,false,false,false,false,false,false,false,false];
+function parseURL()
+{
+    var val;
+    for (i=0; i<params.length; i++)
+    {
+	val=gup(params[i]);
+	if (val===null) val=defaultparams[i];
+	updateparam(params[i],val);
+    }
+    size1=document.getElementById('heightrange').value=document.getElementById('height').innerHTML;
+    size2=document.getElementById('widthrange').value=document.getElementById('width').innerHTML;
+    setSpeed(document.getElementById('speed').value); // all this is crap, obviously
+
+     // make the partitions
+     for (i=1; i<=4; i++)
+     {
+	 y[i-1]=inityoung('y'+i,size1,size2,20,5,document.getElementById("y"+i+"toggle").checked,true,false); // ideally, wouldn't need this, would be like toggle buttons. TODO
+	 if (updateparam('y'+i+'toggle',bool(gup('y'+i)))) // if a partition is given, it's automatically activated -- makes sense	 
+	 {
+	     y[i-1].set(gup('y'+i).split(","));
+	     if (i==4) updateparam('double',true); // if 4th partition, double puzzle
+	 } 
+     }
+}
+
+function getparam(str)
+{
+    var el=document.getElementById(str);
+    if (el.tagName=="INPUT") return el.value;
+    else if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) return el.checked;
+    else return el.innerHTML;
+}
+
+function updateURL()
+{
+    var url=document.location.origin+document.location.pathname;
+    var flag=true;
+    for (i=0; i<params.length; i++)
+    {
+	val=getparam(params[i]);
+	if (val!=defaultparams[i])
+	{
+	    if (flag) { url+="?"; flag=false; } else url+="&";
+	    url+=params[i]+"="+val;
+	}
+    }
+    for (i=1; i<=4; i++)
+        if (document.getElementById("y"+i+"toggle").checked)
+	    url+="&y"+i+"="+y[i-1].get().toString();
+    document.getElementById('url').value=url;
+}
+	
 // start
 function startScript() 
 {
@@ -2440,43 +2498,10 @@ function startScript()
     createIcon();
     // create a template of all tiles
     createTiles();
-
-    opts=['double','K','Kinv','equiv','equiv2','equiv3','nondeg'];
-     for (i=0; i<opts.length; i++)
-	 update(opts[i]+"toggle",bool(gup(opts[i])));
-
-    if (gup('height')>0) size1=+gup('height'); else size1=2;
-    document.getElementById('height').innerHTML=size1;
-    document.getElementById('heightrange').value=size1; // should that be encapsulated?
-    if (gup('width')>0) size2=+gup('width'); else size2=2;
-    document.getElementById('width').innerHTML=size2;
-    document.getElementById('widthrange').value=size2;
-    if (gup('height2')>0) { size1b=+gup('height2'); update('doubletoggle',true); } else size1b=size1;
-    document.getElementById('height2').innerHTML=size1b;
-    document.getElementById('heightrange2').value=size1b; // should that be encapsulated?
-    if (gup('width2')>0) { size2b=+gup('width2'); update('doubletoggle',true); } else size2b=size2;
-    document.getElementById('width2').innerHTML=size2b;
-    document.getElementById('widthrange2').value=size2b;
-    if (gup('speed')>0) setSpeed(gup('speed'));
-
-    intens=gup('intens'); if (intens===null) intens=1; else document.getElementById('colorintens').value=intens;
-
-    var doublePuzzle=document.getElementById("doubletoggle").checked;
     
-    // make the partitions
-    for (i=1; i<=4; i++)
-    {
-	if (doublePuzzle&&(i==2||i==4))
-	    y[i-1]=inityoung('y'+i,size1b,size2b,20,5,document.getElementById("y"+i+"toggle").checked,true,false); // ideally, wouldn't need this, would be like toggle buttons. TODO
-	else
-	    y[i-1]=inityoung('y'+i,size1,size2,20,5,document.getElementById("y"+i+"toggle").checked,true,false); // ideally, wouldn't need this, would be like toggle buttons. TODO
-	update('y'+i+'comp',bool(gup('y'+i+'comp')));
-	if (update('y'+i+'toggle',bool(gup('y'+i)))) // if a partition is given, it's automatically activated -- makes sense	 
-	{
-	    y[i-1].set(gup('y'+i).split(","));
-	    if (i==4) update('doubletoggle',true); // if 4th partition, double puzzle
-	} 
-    }
+    // read options
+    parseURL();
+    updateURL();
 
      // view
      mrot=new Matrix(mrot0[+gup('view')]);
@@ -2486,7 +2511,7 @@ function startScript()
      i=1;
      while (i<=maxmask)
      {
-	     update("check"+i,mask&i);
+	     updateparam("check"+i,mask&i);
 	 i=2*i;
      }
      
@@ -2504,9 +2529,9 @@ function startScript()
      canvas.addEventListener("touchcancel",handleTouchEnd,false);
      canvas.addEventListener("touchmove",handleTouchMove,false);
 
-    // resizing of window
-//    window.addEventListener('resize',drawScene);
-    addResizeListener(precanvas, drawScene); // unfortunately resize only works for windows... have to use this special package
+    //    window.addEventListener('resize',drawScene);
+    //    addResizeListener(precanvas, drawScene); // unfortunately resize only works for windows... have to use this special package
+    new ResizeObserver(drawScene).observe(precanvas);
      
      //lame... no onload for non-body elements
      document.getElementById("sizes").onclick();
