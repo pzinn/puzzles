@@ -2342,7 +2342,14 @@ function togglePartition(s,b) // shouldn't be called directly
     if (inp=document.getElementById(s+"src")) // shitty syntax of "attributes" (as opposed to properties)
     {
 	if (b)
-    	    inp.removeAttribute("disabled");
+	    inp.removeAttribute("disabled");
+	else
+	    inp.disabled="true";
+    }
+    if (inp=document.getElementById(s+"src2")) // shitty syntax of "attributes" (as opposed to properties)
+    {
+	if (b)
+	    inp.removeAttribute("disabled");
 	else
 	    inp.disabled="true";
     }
