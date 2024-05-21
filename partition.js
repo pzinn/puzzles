@@ -63,12 +63,39 @@ partition.prototype =
 	    //	    ll.length=i;
 	    return new partition(ll,this.xmax,this.ymax);
 	},
+	frombinarystring: function(s)
+	{
+	    var i=0;
+	    var a=[];
+	    var c1=0; var c0=0;
+	    for (var i=0; i<s.length; i++) {
+		if (s[i]=="1") c1++; else if (s[i]=="0") {
+		    c0++;
+		    a.unshift(c1);
+		}
+		else {
+		    // TODO: error?
+		}
+	    }
+	    /*
+	    while (c1<this.xmax) { s=s+"1"; c1++; } // probably not needed -- need auto update anyway
+	    while (c0<this.ymax) { s="0"+s; c0++; }
+	    */
+	    this.set(a);
+	},
+	tobinarystring: function()
+	{
+	    var p=this.get_padded();
+	    var s=Array(this.xmax+this.ymax).fill("1");
+	    for (var i=0; i<p.length; i++) s[p[i]+p.length-1-i]="0";
+	    return s.join("");
+	},
 	constructor: partition
     }	
 function partition(p0,xmax,ymax) // too complicated to make partition a descendent of Array. just pseudo-inherit a couple of functions
 {
-    if (typeof(xmax)=='undefined') this.xmax=xmax0; else this.xmax=xmax;
-    if (typeof(ymax)=='undefined') this.ymax=ymax0; else this.ymax=ymax;
+    if (typeof(xmax)=='undefined') this.xmax=xmax0; else this.xmax=+xmax;
+    if (typeof(ymax)=='undefined') this.ymax=ymax0; else this.ymax=+ymax;
     if (!(this.set(p0))) this.length=0;
 }
 

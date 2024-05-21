@@ -36,13 +36,17 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
     canvas2.id=name+"canvas2";
 
     // the text input
-    var src;
+    var src,src2;
     if (source)
     {
 	src=document.createElement('input');
 	src.type="text"; // seems to be text by default
 	src.id=name+"src";
 	if (!enabled) src.disabled=true; // careful that "true" here is meaningless -- even "false" would turn disabled on
+	src2=document.createElement('input');
+	src2.type="text"; // seems to be text by default
+	src2.id=name+"src2";
+	if (!enabled) src2.disabled=true; // careful that "true" here is meaningless -- even "false" would turn disabled on
     }
 
     canvas.enabled=enabled;
@@ -171,7 +175,7 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
     young.set=function(p0) // redefined because need to redraw
     {
 	var flag=partition.prototype.set.call(this,p0); // inheritance
-	if (source) src.value=this.get();
+	if (source) { src.value=this.get(); src2.value=this.tobinarystring(); }
 	if (flag)
 	    canvas.redraw();
 	else
@@ -213,6 +217,12 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 	{
 	    young.set(this.value.split(",")); // partition does everything
 	}
+	src2.value="";
+	src2.onchange=function() // change to user text input only
+	{
+	    // convert binary string to partition which is silly cause gonna get reconverted
+	    young.frombinarystring(this.value);
+	}
     }
 
     // now insert them
@@ -226,7 +236,7 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 //    if (complement) document.getElementById('debug').appendChild(comp);
     div.insertBefore(canvas,div.firstChild);
     div.insertBefore(canvas2,div.firstChild);
-    if (source) div.appendChild(src);
+	if (source) { div.appendChild(src); div.appendChild(src2); }
 
     if (enabled) div.style.color=""; else div.style.color="gray";
     
@@ -241,5 +251,8 @@ function destroyyoung(name)
     var src=document.getElementById(name+"src");
     if (src!==null)
 	div.removeChild(src);
+    var src2=document.getElementById(name+"src2");
+    if (src2!==null)
+	div.removeChild(src2);
 }
 
