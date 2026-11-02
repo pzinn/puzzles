@@ -6,14 +6,14 @@
   <meta name="description" content="Explore Littlewood–Richardson puzzles, tableaux, mosaics, and honeycombs.">
   <meta name="color-scheme" content="light">
   <title>Puzzles · Littlewood–Richardson visualizer</title>
-  <link rel="stylesheet" href="puzzle.css?v=inspector-7">
-  <script src="partition.js" defer></script>
-  <script src="matrix.js" defer></script>
-  <script src="young.js?v=inspector-6" defer></script>
-  <script src="toggle.js?v=inspector-6" defer></script>
-  <script src="text.js" defer></script>
-  <script src="ui.js?v=inspector-6" defer></script>
-  <script src="puzzle.js?v=inspector-6" defer></script>
+  <link rel="stylesheet" href="puzzle.css?v=3.0.0">
+  <script src="partition.js?v=3.0.0" defer></script>
+  <script src="matrix.js?v=3.0.0" defer></script>
+  <script src="young.js?v=3.0.0" defer></script>
+  <script src="toggle.js?v=3.0.0" defer></script>
+  <script src="text.js?v=3.0.0" defer></script>
+  <script src="ui.js?v=3.0.0" defer></script>
+  <script src="puzzle.js?v=3.0.0" defer></script>
 <script id="shader-fs0" type="x-shader/x-fragment">
 #ifdef GL_ES
    precision highp float;
@@ -111,7 +111,7 @@ void main(void)
       <main class="viewer" aria-label="Puzzle viewer">
         <div class="viewer-toolbar">
           <label class="view-picker" for="view-preset">View<select id="view-preset" onchange="presetView(+this.value)">
-            <option value="0">Puzzle · 0</option><option value="1">Mosaic · 1</option><option value="2">Tableau · 2</option><option value="3">Dual tableau · 3</option><option value="4">Square lattice · 4</option><option value="5">Honeycomb · 5</option><option value="6">Dual honeycomb · 6</option><option value="7">Dual puzzle · 7</option><option value="8">Dual mosaic · 8</option><option value="9">Rotated puzzle · 9</option>
+            <option value="0">0 · Puzzle</option><option value="1">1 · Mosaic</option><option value="2">2 · Tableau</option><option value="3">3 · Dual tableau</option><option value="4">4 · Square lattice</option><option value="5">5 · Honeycomb</option><option value="6">6 · Dual honeycomb</option><option value="7">7 · Dual puzzle</option><option value="8">8 · Dual mosaic</option><option value="9">9 · Rotated puzzle</option>
           </select></label>
           <details class="popover display-options"><summary>Display</summary><div class="popover-panel">
             <fieldset><legend>Paths</legend>

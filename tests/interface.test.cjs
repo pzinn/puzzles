@@ -2,6 +2,78 @@ const assert = require('node:assert/strict');
 const {test} = require('node:test');
 const {createApp} = require('./helpers/app.cjs');
 
+function pressShortcut(app, active, key, options = {}) {
+  app.context.document.activeElement = active;
+  const event = {key, defaultPrevented:false, ...options,
+    preventDefault() {this.defaultPrevented = true;}};
+  app.context.handleKeyDown(event);
+  return event.defaultPrevented;
+}
+
+test('display shortcuts work from menu headings, checkboxes, and buttons without moving focus', () => {
+  const app = createApp();
+  const arrows = app.add('check16', 'input', 'toggle-button');
+  arrows.type = 'checkbox';
+  app.context.initToggle();
+  app.context.drawScene = () => {};
+  const summary = app.add('display-summary', 'summary');
+  const button = app.add('rotation-toggle', 'button');
+  const result = app.add('result', 'button');
+  result.onclick = app.context.loadPuzzle;
+  for (const active of [summary, arrows, button, result]) {
+    const before = arrows.checked;
+    assert.equal(pressShortcut(app, active, 'a'), true);
+    assert.equal(arrows.checked, !before);
+    assert.equal(app.context.document.activeElement, active);
+    assert.equal(pressShortcut(app, active, 'A'), true);
+    assert.equal(arrows.checked, before);
+  }
+});
+
+test('number shortcuts select views while the View picker or a menu heading has focus', () => {
+  const app = createApp();
+  const view = app.add('view-preset', 'select');
+  const summary = app.add('display-summary', 'summary');
+  app.context.window.matchMedia = () => ({matches:true});
+  app.context.drawScene = () => {};
+  for (const active of [view, summary]) {
+    for (const key of ['0','1','9']) {
+      assert.equal(pressShortcut(app, active, key), true);
+      assert.equal(view.value, key);
+      assert.equal(app.context.document.activeElement, active);
+    }
+  }
+  assert.equal(pressShortcut(app, view, 'p'), false); // Keep native type-ahead.
+});
+
+test('focused controls retain their native activation and navigation keys', () => {
+  const app = createApp();
+  const checkbox = app.add('check16', 'input');
+  checkbox.type = 'checkbox';
+  const controls = [app.add('display-summary', 'summary'), checkbox,
+    app.add('rotation-toggle', 'button'), app.add('view-preset', 'select')];
+  for (const active of controls)
+    for (const key of [' ', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'])
+      assert.equal(pressShortcut(app, active, key), false, active.tagName+' '+key);
+});
+
+test('shortcuts leave editable fields, other selectors, and modified keystrokes alone', () => {
+  const app = createApp();
+  const text = app.add('text', 'input'); text.type = 'text';
+  const number = app.add('number', 'input'); number.type = 'number';
+  const range = app.add('range', 'input'); range.type = 'range';
+  const editable = app.add('editable', 'div'); editable.isContentEditable = true;
+  for (const active of [text, number, range, editable, app.add('notes', 'textarea'), app.add('other', 'select')])
+    for (const key of ['a', '1', ' ', 'Enter', 'ArrowDown'])
+      assert.equal(pressShortcut(app, active, key), false, active.tagName+' '+key);
+  for (const options of [{ctrlKey:true}, {metaKey:true}, {altKey:true},
+    {isComposing:true}, {defaultPrevented:true}]) {
+    const eventWasPrevented = !!options.defaultPrevented;
+    for (const key of ['a','1'])
+      assert.equal(pressShortcut(app, app.context.document.body, key, options), eventWasPrevented);
+  }
+});
+
 test('native checkbox state restores from a URL and serializes as a boolean', () => {
   const app = createApp('?K&equiv=false&double');
   assert.equal(app.el('K').tagName, 'INPUT');

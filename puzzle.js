@@ -1682,11 +1682,19 @@ function animateIcon()
 function handleKeyDown(event)
 {
     var active=document.activeElement;
-    if (active!=document.body && active!=canvas && active.onclick!=loadPuzzle) return;
-
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
 
     var key=event.key;
+    // Shortcuts may follow focus into menus, but never interrupt editing.
+    if (!active || active.isContentEditable || active.tagName==='TEXTAREA' ||
+	(active.tagName==='INPUT' && !['checkbox','radio','button','submit','reset'].includes(active.type))) return;
+    // The View picker shares the numbered presets; other select keys stay native.
+    if (active.tagName==='SELECT' && (active.id!=='view-preset' || !/^[0-9]$/.test(key))) return;
+
+    var pageFocused=active===document.body || active===canvas;
+    if ((key===' ' || key==='Enter') && !pageFocused) return;
+    if (key.startsWith('Arrow') && !pageFocused && active.onclick!==loadPuzzle) return;
+
     // we allow arrows when playing with puzzle buttons
     if (key == "ArrowLeft") // <-
     {
@@ -1724,8 +1732,6 @@ function handleKeyDown(event)
     }
     else
     {
-	if (active!=document.body && active!=canvas) return;
-
 	if (key == " ") // space
 	{
 	    toggleAnimation();
@@ -1741,6 +1747,7 @@ function handleKeyDown(event)
 	    key=key.toUpperCase();
 	    if (key=="D") // debugging
 	    {
+		if (!pageFocused) return;
 		document.getElementById('debug').removeAttribute('hidden');
 		if (document.getElementById('debug').innerHTML=="")
 		    dump();

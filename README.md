@@ -1,4 +1,4 @@
-# Puzzles
+# Puzzles 3.0.0
 
 A static JavaScript app for enumerating and visualizing Littlewood–Richardson
 puzzles and related tableaux, mosaics, and honeycombs. It also supports double
@@ -34,8 +34,12 @@ The viewer requires a browser with WebGL and ResizeObserver support.
 
 Right-drag to rotate the canvas. Touch uses the same pointer actions; enable
 **Swap pointer actions** under **Interaction options** to rotate by dragging on
-a touch screen. Keyboard shortcuts work with the page or canvas focused, and
-arrow navigation works on result buttons. Open **Help** for the shortcut list.
+a touch screen. Display and view shortcuts also work while menu headings,
+buttons, or checkboxes have focus; the **View** picker accepts **0–9** directly.
+Typing fields keep their normal behavior. Space, Enter, and arrow keys retain
+their normal control actions; canvas shortcuts work with the page or canvas
+focused, and arrow navigation works on result buttons. Open **Help** for the
+shortcut list.
 
 The desktop layout keeps the calculation inspector beside the canvas, with its
 settings scrolling above a persistent compute action. On narrow
