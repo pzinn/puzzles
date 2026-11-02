@@ -543,8 +543,8 @@ function makeCurrent(but) // make a puzzle the currently viewed one
 	{ // ... and possibly update the partitions 
 	    document.getElementById("heightrange").value=parts[0]; 
 	    document.getElementById("widthrange").value=parts[1];
-	    document.getElementById("height").innerHTML=parts[0]; // sadly, onchange doesn't work.....
-	    document.getElementById("width").innerHTML=parts[1];
+	    document.getElementById("height").textContent=parts[0]; // sadly, onchange doesn't work.....
+	    document.getElementById("width").textContent=parts[1];
 	    updateparam('double',parts.length==6);
 	    resetYoung(parts.slice(2));
 	    for (var i=0; i<4; i++)
@@ -1395,8 +1395,8 @@ function process() // called when one presses the button... "process"
 	return;
     }
 
-    size1=+document.getElementById("height").innerHTML;
-    size2=+document.getElementById("width").innerHTML;
+    size1=+document.getElementById("height").textContent;
+    size2=+document.getElementById("width").textContent;
     size=size1+size2;
 
     // array of edge states. a global variable (eww) that will be used by initPuzzle/makePuzzle/buildScene
@@ -1767,6 +1767,7 @@ function handleMouseDown(event)
 	if (y>0.9*canvas.height) // TEMP. eventually tiles will be moved elsewhere
 	{ // we've decided to select another tile
 	    var sel=Math.floor(x/canvas.width*tiles.length);
+	    if (sel<0 || sel>=tiles.length) sel=-1;
 	    if (sel!=graph.select)
 	    {
 		graph.select=sel;
@@ -1780,7 +1781,8 @@ function handleMouseDown(event)
 	    drawScene(); // just in case selection indicated. e.g. move pointer.
 	    return false;
 	}
-	// select>=0, means we have selected a tile. then mouse click means something different
+	// No placement until a tile is selected (including after right-click deselection).
+	if (!Number.isInteger(graph.select) || graph.select<0 || graph.select>=tiles.length) return false;
 	// a bit painful: we're gonna go thru all tileable edges and see if one isn't too far...
 	var c,i,j,k,l,ii,jj,kk;
 	for (l=0; l<tileable.length; l++)
@@ -2258,13 +2260,13 @@ function createTileable() // compute locations in global edge list where one can
 
 function setSize(which,value) 
 {
-    document.getElementById(which).innerHTML=value;
+    updateparam(which,value);
     resetYoung();
 }
 
 function setSpeed(value) 
 {
-    document.getElementById('speedtext').innerHTML= (value<10)? value : '&infin;';
+    document.getElementById('speedtext').textContent= (value<10)? value : '\u221e';
 }
 
 function setIntens(value)
@@ -2274,8 +2276,8 @@ function setIntens(value)
 
 function resetYoung(newy) // there should be a better way... if newy==null just keep existing values
 {
-    s1=+document.getElementById("height").innerHTML;
-    s2=+document.getElementById("width").innerHTML;
+    var s1=+document.getElementById("height").textContent;
+    var s2=+document.getElementById("width").textContent;
     var yp;
     // young diagrams
     for (var i=0; i<4; i++)
@@ -2358,18 +2360,12 @@ function togglePartition(s,b) // shouldn't be called directly
 
 // to parse URL
 function gup(name, url) {
-    if (!url) url = window.location.href;
-    name = name.replace(/[\[\]]/g, "\\$&");
-    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-        results = regex.exec(url);
-    if (!results) return null; // if absent
-    if (!results[2]) return ''; // if present but w/o assigned value
-    return decodeURIComponent(results[2].replace(/\+/g, " ")); // if present and has a value
+    return new URL(url || window.location.href,window.location.href).searchParams.get(name);
 }
 
 function bool(str) // converts null or string from url to boolean
 {
-    return (str!=='false')&&((str==="")||(+str!=0));
+    return str!==null && str!==undefined && (str!=='false')&&((str==="")||(+str!=0));
 }
 
 /*
@@ -2390,35 +2386,51 @@ function doresize()
 
 function updateparam(str,val)
 {
+    if (Object.prototype.hasOwnProperty.call(numericparams,str)) val=numericparam(str,val);
     var el=document.getElementById(str);
     if (el.tagName=="INPUT") el.value=+val;
     else if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) el.update(bool(val)); // eww
-    else el.innerHTML=val;
+    else el.textContent=val;
     return val;
 }
 
-var params=['height','width','speed','intens','double','K','Kinv','equiv','equiv2','equiv3','nondeg','y1comp','y2comp','y3comp','y4comp'];
-var defaultparams=[2,2,4,1,false,false,false,false,false,false,false,false,false,false,false];
+// Defaults are keyed by name so adding a parameter cannot shift other defaults.
+var defaultparams={height:2,width:2,speed:4,intens:1,double:false,K:false,Kinv:false,equiv:false,equiv2:false,equiv3:false,nondeg:false,y1comp:false,y2comp:false,y3comp:false,y4comp:false};
+var params=Object.keys(defaultparams);
+var numericparams={height:[1,10,true],width:[1,10,true],speed:[1,10,true],intens:[0,1,false]};
+
+function numericparam(name,value)
+{
+    var limits=numericparams[name];
+    var number=+value;
+    if ((typeof value==='string' && value.trim()==='') || !Number.isFinite(number) || number<limits[0] || number>limits[1] || (limits[2] && !Number.isInteger(number)))
+	return defaultparams[name];
+    return number;
+}
+
 function parseURL()
 {
     var val;
-    for (i=0; i<params.length; i++)
+    for (var i=0; i<params.length; i++)
     {
 	val=gup(params[i]);
-	if (val===null) val=defaultparams[i];
+	if (val===null) val=defaultparams[params[i]];
 	updateparam(params[i],val);
     }
-    size1=document.getElementById('heightrange').value=document.getElementById('height').innerHTML;
-    size2=document.getElementById('widthrange').value=document.getElementById('width').innerHTML;
+    size1=+document.getElementById('height').textContent;
+    size2=+document.getElementById('width').textContent;
+    document.getElementById('heightrange').value=size1;
+    document.getElementById('widthrange').value=size2;
     setSpeed(document.getElementById('speed').value); // all this is crap, obviously
 
      // make the partitions
      for (i=1; i<=4; i++)
      {
 	 y[i-1]=inityoung('y'+i,size1,size2,20,5,document.getElementById("y"+i+"toggle").checked,true,false); // ideally, wouldn't need this, would be like toggle buttons. TODO
-	 if (updateparam('y'+i+'toggle',bool(gup('y'+i)))) // if a partition is given, it's automatically activated -- makes sense	 
+	 val=gup('y'+i);
+	 if (updateparam('y'+i+'toggle',val!==null)) // presence activates even the empty partition ("" or "0")
 	 {
-	     y[i-1].set(gup('y'+i).split(","));
+	     y[i-1].set(val.split(","));
 	     if (i==4) updateparam('double',true); // if 4th partition, double puzzle
 	 } 
      }
@@ -2429,26 +2441,22 @@ function getparam(str)
     var el=document.getElementById(str);
     if (el.tagName=="INPUT") return el.value;
     else if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) return el.checked;
-    else return el.innerHTML;
+    else return el.textContent;
 }
 
 function updateURL()
 {
-    var url=document.location.origin+document.location.pathname;
-    var flag=true;
-    for (i=0; i<params.length; i++)
+    var query=new URLSearchParams();
+    for (var i=0; i<params.length; i++)
     {
-	val=getparam(params[i]);
-	if (val!=defaultparams[i])
-	{
-	    if (flag) { url+="?"; flag=false; } else url+="&";
-	    url+=params[i]+"="+val;
-	}
+	var val=getparam(params[i]);
+	if (String(val)!==String(defaultparams[params[i]])) query.set(params[i],val);
     }
     for (i=1; i<=4; i++)
         if (document.getElementById("y"+i+"toggle").checked)
-	    url+="&y"+i+"="+y[i-1].get().toString();
-    document.getElementById('url').value=url;
+	    query.set('y'+i,y[i-1].get().toString());
+    var search=query.toString();
+    document.getElementById('url').value=document.location.origin+document.location.pathname+(search?'?'+search:'');
 }
 	
 // start

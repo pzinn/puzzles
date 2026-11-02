@@ -130,7 +130,7 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 //	    var x = Math.floor((event.pageX - this.offsetLeft-border)/boxsize);
 	    //	    var y = Math.floor((event.pageY - this.offsetTop-border)/boxsize);
 	    young.togglebox(x,y);
-	    if (source) src.value=young.get();
+	    if (source) { src.value=young.get(); src2.value=young.tobinarystring(); }
 	    this.drawnormal(x,y); // necessary because of this annoying transparency thing..
 	    this.drawselected(x,y,pos.x,pos.y);
 	    return false; // prevent default behavior -- not that we care so much since cursor style moved to onmousemove
@@ -217,7 +217,7 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 	{
 	    young.set(this.value.split(",")); // partition does everything
 	}
-	src2.value="";
+	src2.value=young.tobinarystring();
 	src2.onchange=function() // change to user text input only
 	{
 	    // convert binary string to partition which is silly cause gonna get reconverted

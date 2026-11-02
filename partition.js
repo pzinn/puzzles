@@ -27,18 +27,20 @@ partition.prototype =
 	},
 	set: function(p0)
 	{
-	    if ((typeof(p0)=='object')&&(p0.constructor==Array)&&(p0.length<=this.ymax))
+	    if (Array.isArray(p0)&&(p0.length<=this.ymax))
 	    {
+		var p=[];
 		for (var i=0; i<p0.length; i++)
 		{
-		    p0[i]=Math.round(+p0[i]); // turn into numbers
-		    if (isNaN(p0[i]) || (i==0 && p0[i]<0) || p0[i]>p0[i-1] || p0[i]>this.xmax) return false;
+		    var value=+p0[i];
+		    if (!Number.isInteger(value) || value<0 || value>this.xmax || (i>0 && value>p[i-1])) return false;
+		    p.push(value);
 		}
 		// remove the trailing zeroes
-		while (p0.length>0 && p0[p0.length-1]==0) p0.pop();
-		for (var i=0; i<p0.length; i++)
-		    this[i]=p0[i];
-		this.length=p0.length;
+		while (p.length>0 && p[p.length-1]==0) p.pop();
+		for (var i=0; i<p.length; i++)
+		    this[i]=p[i];
+		this.length=p.length;
 		return true;
 	    }
 	    return false;
