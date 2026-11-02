@@ -1,7 +1,19 @@
-<html>
-  <head>
-<title>Paul's puzzle viewer v2.5</title>
-  
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore Littlewood–Richardson puzzles, tableaux, mosaics, and honeycombs.">
+  <meta name="color-scheme" content="light">
+  <title>Puzzles · Littlewood–Richardson visualizer</title>
+  <link rel="stylesheet" href="puzzle.css?v=inspector-7">
+  <script src="partition.js" defer></script>
+  <script src="matrix.js" defer></script>
+  <script src="young.js?v=inspector-6" defer></script>
+  <script src="toggle.js?v=inspector-6" defer></script>
+  <script src="text.js" defer></script>
+  <script src="ui.js?v=inspector-6" defer></script>
+  <script src="puzzle.js?v=inspector-6" defer></script>
 <script id="shader-fs0" type="x-shader/x-fragment">
 #ifdef GL_ES
    precision highp float;
@@ -54,6 +66,7 @@ uniform float aspect;
 uniform vec4 shift;
 attribute vec4 VertexPosition;
 uniform float pointSize;
+uniform float pixelRatio;
 void main(void) 
 {
   gl_Position=rotationMatrix*orthogMatrix*VertexPosition*scale+shift; // yes, scale and orthogMatrix could be absorbed in the rotation matrix, but more convenient this way
@@ -61,203 +74,102 @@ void main(void)
   gl_Position[2]=-gl_Position[2]-0.06; // some arbitrary quantity to put points on top of everyone
   gl_Position[3]=1.0; // trick! :) (we kill the projective coordinate => usual 4d affine)
   gl_PointSize=8.+(pointSize-8.)*scale;
-  if (gl_PointSize>32.) gl_PointSize=32.; // shouldn't be bigger than texture size, which is hardcoded to be 32 at the moment :/
+  if (gl_PointSize>32.) gl_PointSize=32.;
+  gl_PointSize*=pixelRatio; // shouldn't be bigger than texture size, which is hardcoded to be 32 at the moment :/
 }
 </script>
 
-  <link rel="stylesheet" type="text/css" href="puzzle.css"/>
-
-  <script type="text/javascript" src="partition.js"></script>
-  
-  <script type="text/javascript" src="matrix.js"></script>
-  
-  <script type="text/javascript" src="young.js"></script>
-  
-  <script type="text/javascript" src="puzzle.js"></script>
-  
-  <link rel="stylesheet" type="text/css" href="menu.css"/>
-  <script type="text/javascript" src="menu.js"></script>
-  
-  <script type="text/javascript" src="toggle.js"></script>
-  <link rel="stylesheet" type="text/css" href="toggle.css"/>
-
-  <script type="text/javascript" src="text.js"></script>
-
-  <script type="text/javascript" src="help.js"></script>
-  <link rel="stylesheet" type="text/css" href="help.css"/>
-
 </head>
-
 <body onload="initToggle();startScript();">
-
-<div class="mygrid">
-  <div id="precanvas">
-    <canvas id="webglcanvas"></canvas>
-    <div class="menu-title" onclick="process()" id="submit">Process</div>
-    <div id="menuoverlay">
-      <div id="view" class="menu-title"
-	   onmouseover="mopen('view','view-menu')" 
-	   onmouseout="mclosetime('view')"
-	   onclick="mtoggle('view','view-menu')">
-	Toggle view
-      </div>
-      <ul id="view-menu"
-	  class="menu"
-	  onmouseover="mcanceltimer('view')" 
-	  onmouseout="mclosetime('view')"
-	  onclick="drawScene()"
-	  hidden>
-	<li class="toggle-button" id="check1"><button>G</button>reen lines<span class="info">Displays one of the two conserved charges</span></li>
-	<li class="toggle-button" id="check2"><button>R</button>ed lines<span class="info">Displays one of the two conserved charges</span></li>
-	<li class="toggle-button" id="check4"><button>L</button>oops<span class="info">Views puzzles as a loop model</span></li>
-	<li class="toggle-button" checked id="check8"><button>F</button>rame<span class="info">Draws a frame around the puzzle</span></li>
-	<li class="toggle-button" id="check16"><button>A</button>rrows<span class="info">Displays the labels of the 3/4 partitions and their orientation</span></li>
-	<li class="toggle-button" id="check32"><button>P</button>oints<span class="info">Displays external edges as colored vertices</span></li>
-	<li class="toggle-button" id="check64">Green line numbering<span class="info">Numbering that is relevant for tableau representation</span></li>
-	<li class="toggle-button" id="check128">Red line numbering<span class="info">Numbering that is relevant for dual tableau representation</span></li>
-	<li class="toggle-button" id="check256">Edge numbering<span class="info">Numbering that is relevant for honeycomb representation</span></li>
-	<li class="toggle-button" id="check512">Dual edge numbering<span class="info">Numbering that is relevant for dual honeycomb representation</span></li>
-	<li class="toggle-button" id="check1024">Traditional edge labelling<span class="info">Traditional multinumber puzzle notation</span></li>
-      </ul>
+  <a class="skip-link" href="#partitions">Skip to calculation settings</a>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand"><h1>Puzzles</h1><p>Littlewood–Richardson visualizer</p></div>
+      <nav class="header-actions" aria-label="Resources">
+        <details class="popover" id="examples"><summary>Examples</summary><div class="popover-panel">
+          <h2>Start with an example</h2>
+          <a class="example-link" href="?height=2&amp;width=2&amp;y1=1&amp;y2=1&amp;y3=1&amp;y4=1&amp;process">Four lines in 3-space<span>Find the lines meeting four given lines.</span></a>
+          <a class="example-link" href="?height=5&amp;width=4&amp;y1=3,2,1,1&amp;y2=3,1&amp;y3=4,3,2,1,1&amp;y3comp&amp;process">Littlewood–Richardson coefficient<span>The example from the Berkeley lectures.</span></a>
+        </div></details>
+        <details class="popover" id="help"><summary>Help</summary><div class="popover-panel help-panel">
+          <h2>Explore a puzzle</h2>
+          <ol><li>Choose the bounding box, enable partitions, and enter their rows or edit their diagrams.</li><li>Select allowed tiles, then choose <strong>Compute puzzles</strong>.</li><li>Choose a numbered result or <strong>Overview</strong>. Right-drag the canvas to rotate; click a puzzle in the overview to inspect it.</li></ol>
+          <p>Partitions are read from bottom/left to top/right. Use <strong>Arrows</strong> in Display to see their orientation.</p>
+          <h3>Keyboard shortcuts</h3>
+          <p><kbd>0</kbd>–<kbd>9</kbd> views · <kbd>Space</kbd> animate · <kbd>Enter</kbd> rotate 90° · <kbd>←</kbd>/<kbd>→</kbd> results · <kbd>↑</kbd>/<kbd>↓</kbd> calculations.</p>
+          <p>On touch screens, enable <strong>Swap pointer actions</strong> below the canvas to rotate by dragging.</p>
+          <p><a href="https://www.lpthe.jussieu.fr/~pzinn/semi/berkeley.pdf">Berkeley lecture notes</a></p>
+        </div></details>
+        <details class="popover" id="share" ontoggle="if(this.open) updateURL()"><summary>Share</summary><div class="popover-panel">
+          <label for="url">Link to these settings</label><textarea id="url" rows="3" readonly onclick="updateURL();this.select()"></textarea>
+          <button type="button" onclick="copyPuzzleLink()">Copy link</button><p class="field-note" id="share-status" role="status"></p>
+        </div></details>
+      </nav>
+    </header>
+    <div class="workspace-heading"><p id="workspace-summary">Triangular puzzle · 2 × 2 box</p><p id="calculation-status" role="status">Ready to compute</p></div>
+    <div class="workspace">
+      <main class="viewer" aria-label="Puzzle viewer">
+        <div class="viewer-toolbar">
+          <label class="view-picker" for="view-preset">View<select id="view-preset" onchange="presetView(+this.value)">
+            <option value="0">Puzzle · 0</option><option value="1">Mosaic · 1</option><option value="2">Tableau · 2</option><option value="3">Dual tableau · 3</option><option value="4">Square lattice · 4</option><option value="5">Honeycomb · 5</option><option value="6">Dual honeycomb · 6</option><option value="7">Dual puzzle · 7</option><option value="8">Dual mosaic · 8</option><option value="9">Rotated puzzle · 9</option>
+          </select></label>
+          <details class="popover display-options"><summary>Display</summary><div class="popover-panel">
+            <fieldset><legend>Paths</legend>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check1" onchange="drawScene()">Green paths <kbd>G</kbd></label>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check2" onchange="drawScene()">Red paths <kbd>R</kbd></label>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check4" onchange="drawScene()">Loops <kbd>L</kbd></label>
+            </fieldset>
+            <fieldset><legend>Annotations</legend>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check8" checked onchange="drawScene()">Frame <kbd>F</kbd></label>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check16" onchange="drawScene()">Partition arrows <kbd>A</kbd></label>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check32" onchange="drawScene()">Boundary points <kbd>P</kbd></label>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check64" onchange="drawScene()">Green line numbering</label>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check128" onchange="drawScene()">Red line numbering</label>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check256" onchange="drawScene()">Edge numbering</label>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check512" onchange="drawScene()">Dual edge numbering</label>
+              <label class="check"><input type="checkbox" class="toggle-button" id="check1024" onchange="drawScene()">Traditional edge labels</label>
+            </fieldset>
+            <p class="field-note">For tableaux, enable the frame and matching line numbering. For honeycombs, use edge numbering or rotate slightly away from the flat view.</p>
+          </div></details>
+          <label class="color-control" for="intens">Color<input type="range" id="intens" min="0" max="1" step="0.01" value="1" oninput="setIntens(this.value)"></label>
+        </div>
+        <div id="precanvas" class="canvas-stage">
+          <canvas id="webglcanvas" tabindex="0" aria-label="Interactive puzzle visualization. Use the view controls or drag to rotate.">WebGL is required to display puzzles.</canvas>
+          <div id="canvas-empty" class="canvas-empty"><h2>Explore the geometry of puzzles</h2><p>Enable a boundary partition in the inspector, or start with an example.</p><a class="button" href="?height=2&amp;width=2&amp;y1=1&amp;y2=1&amp;y3=1&amp;y4=1&amp;process">Try the four-line example</a></div>
+        </div>
+        <div class="interaction-toolbar">
+          <button type="button" id="rotation-toggle" aria-pressed="false" onclick="toggleAnimation()">Animate rotation</button><button type="button" onclick="rotate90()">Rotate 90°</button>
+          <details class="pointer-options"><summary>Interaction options</summary><div><label class="check"><input type="checkbox" id="keyboard" checked onchange="toggleKeyboard(this.checked)">Keyboard shortcuts</label><label class="check"><input type="checkbox" id="mousebuttons" onchange="toggleMouseButtons(this.checked)">Swap pointer actions</label></div></details>
+        </div>
+        <section id="list" class="results" aria-labelledby="results-title">
+          <div class="results-heading"><h2 id="results-title">Results <span id="result-count"></span></h2><button type="button" onclick="clearPuzzles()">Clear</button></div>
+          <div id="puzzles"><p id="results-placeholder" class="field-note">Computed puzzles will appear here.</p></div><div id="debug" hidden></div>
+        </section>
+      </main>
+      <aside class="inspector" id="partitions" aria-label="Calculation inspector">
+        <div class="settings-scroll">
+        <fieldset id="calculation-settings"><legend class="sr-only">Calculation settings</legend>
+          <section class="inspector-section" id="sizes-section"><h2>Size</h2>
+            <div class="size-fields"><label for="heightrange">Height<input type="number" id="heightrange" min="1" max="10" step="1" value="2" onchange="setSize('height',this.value)"></label><span aria-hidden="true">×</span><label for="widthrange">Width<input type="number" id="widthrange" min="1" max="10" step="1" value="2" onchange="setSize('width',this.value)"></label></div>
+            <span id="height" hidden>2</span><span id="width" hidden>2</span><label class="check double-control"><input type="checkbox" class="toggle-button" id="double" onchange="toggleDouble(this.checked)">Double puzzle</label>
+          </section>
+          <section class="inspector-section" aria-labelledby="partitions-title"><h2 id="partitions-title">Boundary partitions</h2><p class="field-note">Enable a partition to fix that boundary. Enter rows in decreasing order.</p>
+            <div id="y1" class="partition"><div class="partition-heading"><label class="check"><input type="checkbox" class="toggle-button" id="y1toggle" aria-label="Use partition lambda" onchange="togglePartition('y1',this.checked)"><span class="label">λ</span></label><button type="button" class="complement" id="y1comp" aria-label="Complement lambda" aria-pressed="false" onchange="toggleComp('y1')">Complement</button></div><div class="partition-fields"><div id="y1diagram" class="young-diagram"></div><div id="y1rows"><label for="y1src">Rows</label></div></div></div>
+            <div id="y2" class="partition"><div class="partition-heading"><label class="check"><input type="checkbox" class="toggle-button" id="y2toggle" aria-label="Use partition mu" onchange="togglePartition('y2',this.checked)"><span class="label">μ</span></label><button type="button" class="complement" id="y2comp" aria-label="Complement mu" aria-pressed="false" onchange="toggleComp('y2')">Complement</button></div><div class="partition-fields"><div id="y2diagram" class="young-diagram"></div><div id="y2rows"><label for="y2src">Rows</label></div></div></div>
+            <div id="y3" class="partition"><div class="partition-heading"><label class="check"><input type="checkbox" class="toggle-button" id="y3toggle" aria-label="Use partition nu" onchange="togglePartition('y3',this.checked)"><span class="label">ν</span></label><button type="button" class="complement" id="y3comp" aria-label="Complement nu" aria-pressed="false" onchange="toggleComp('y3')">Complement</button></div><div class="partition-fields"><div id="y3diagram" class="young-diagram"></div><div id="y3rows"><label for="y3src">Rows</label></div></div></div>
+            <div id="y4" class="partition" hidden><div class="partition-heading"><label class="check"><input type="checkbox" class="toggle-button" id="y4toggle" aria-label="Use partition rho" onchange="togglePartition('y4',this.checked)"><span class="label">ρ</span></label><button type="button" class="complement" id="y4comp" aria-label="Complement rho" aria-pressed="false" onchange="toggleComp('y4')">Complement</button></div><div class="partition-fields"><div id="y4diagram" class="young-diagram"></div><div id="y4rows"><label for="y4src">Rows</label></div></div></div>
+            <details class="binary-section"><summary>Binary notation</summary><div class="binary-fields"><div id="y1binary"><label for="y1src2">λ</label></div><div id="y2binary"><label for="y2src2">μ</label></div><div id="y3binary"><label for="y3src2">ν</label></div><div id="y4binary" hidden><label for="y4src2">ρ</label></div></div></details>
+          </section>
+          <details class="inspector-section" id="tiles-section"><summary>Allowed tiles</summary><div class="detail-content"><p class="field-note">Ordinary cohomology tiles are always included.</p>
+            <label class="check"><input type="checkbox" class="toggle-button" id="K">K-tile</label><label class="check"><input type="checkbox" class="toggle-button" id="Kinv">180° K-tile</label><label class="check"><input type="checkbox" class="toggle-button" id="equiv">Equivariant tile</label><label class="check"><input type="checkbox" class="toggle-button" id="equiv2">120° equivariant tile</label><label class="check"><input type="checkbox" class="toggle-button" id="equiv3">240° equivariant tile</label><label class="check" hidden><input type="checkbox" class="toggle-button" id="nondeg">Nondegenerate tiles</label>
+          </div></details>
+          <details class="inspector-section" id="editor-section"><summary>Manual editor</summary><div class="detail-content"><label class="check"><input type="checkbox" class="toggle-button" id="editortoggle" onchange="syncInterface()">Build a puzzle by hand</label><p class="field-note">Start editing, then choose a tile at the bottom of the canvas. Right-click deselects; middle-click undoes the last tile. Views 0 and 1 work best.</p></div></details>
+        </fieldset>
+        </div>
+        <div class="computation-controls"><label for="speed">Computation speed <output id="speedtext" for="speed">4</output><input type="range" id="speed" min="1" max="10" step="1" value="4" oninput="setSpeed(this.value)"></label><p id="input-error" class="input-error" role="alert" hidden></p><button type="button" class="primary-button" id="submit" onclick="process()">Compute puzzles</button><label class="check update-parts"><input type="checkbox" id="updateparts" checked>Follow selected puzzle’s partitions</label></div>
+      </aside>
     </div>
-</div>
-  <div id="partitions">
-    <h3 class="menu-title-active">Partitions</h3>
-    All partitions are read from bottom/left to top/right (toggle the arrows to see on the picture)
-    <div id="y1">
-      <span style="position:absolute">
-	<span class="toggle-button" id="y1toggle" onchange="togglePartition('y1',this.checked)"></span>
-	<span id="y1comp" class="complement" onchange="toggleComp('y1')"></span>
-      </span>
-      <span class="label">&lambda;:</span>
-    </div>
-    <div id="y2">
-      <span style="position:absolute">
-	<span class="toggle-button" id="y2toggle" onchange="togglePartition('y2',this.checked)"></span>
-	<span id="y2comp" class="complement" onchange="toggleComp('y2')"></span>
-      </span>
-      <span class="label">&mu;:</span>
-    </div>
-    <div id="y3">
-      <span style="position:absolute">
-	<span class="toggle-button" id="y3toggle" onchange="togglePartition('y3',this.checked)"></span>
-	<span id="y3comp" class="complement" onchange="toggleComp('y3')"></span>
-      </span>
-      <span class="label">&nu;:</span>
-    </div>
-    <div id="y4" hidden>
-      <span style="position:absolute">
-	<span class="toggle-button" id="y4toggle" onchange="togglePartition('y4',this.checked)"></span>
-	<span id="y4comp" class="complement" onchange="toggleComp('y4')"></span>
-      </span>
-      <span class="label">&rho;:</span>
-    </div>
-    <p><input type="checkbox" checked id="updateparts"/> update partitions from puzzle</p>
-    <p>URL for these choices: <textarea rows="1" cols="50" wrap="off" onclick="updateURL();this.focus();this.select()" readonly id="url"></textarea></p>
   </div>
-<div id="settings">
-    <div id="multi">
-      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','sizes-section')" id="sizes">Sizes</span>
-      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','tiles-section')" id="tiles">Tiles</span>
-      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','controls-section')" id="controls">Controls</span>
-      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','editor-section')" id="editor">Editor</span>
-      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','examples-section')" id="examples">Examples</span>
-      <span class="menu-title" onclick="mstyle('multi',this);mopen('multi','help-section')" id="help">Help</span>
-    </div>
-    <div id="sizes-section" hidden>
-      <br/>
-      <div><input type="range" id="heightrange" onchange="setSize('height',this.value)" step="1" min="1" max="10" value="2"/> height&nbsp;=&nbsp;<span id="height">2</span></div>
-      <div><input type="range" id="widthrange" onchange="setSize('width',this.value)" step="1" min="1" max="10" value="2"/> width&nbsp;=&nbsp;<span id="width">2</span></div>
-      <span class="toggle-button" id="double" onchange="toggleDouble(this.checked)">double puzzle</span>
-    </div>
-    <div id="tiles-section" hidden>
-      <ul style="list-style:none;padding:0">
-      <li class="toggle-button" id="K">K-tile</li>
-      <li class="toggle-button" id="Kinv">180&deg; K-tile</li>
-      <li class="toggle-button" id="equiv">equivariant tile</li>
-      <li class="toggle-button" id="nondeg" hidden>nondegenerate tiles</li>
-      <li class="toggle-button" id="equiv2">120&deg; equivariant tile</li>
-      <li class="toggle-button" id="equiv3">240&deg; equivariant tile</li>
-    </ul>
-    </div>
-    <div id="examples-section" hidden>
-      <ul>
-	<li>The <a href="./?height=5&width=4&y1=3,2,1,1&y2=3,1&y3=4,3,2,1,1&y3comp&process">example</a> from my <a href="http://www.lpthe.jussieu.fr/~pzinn/semi/berkeley.pdf">Berkeley lectures</a>.</li>
-	<li>How many lines in 3-space intersect 4 given lines in general position? <a href="./?height=2&width=2&y1=1&y2=1&y3=1&y4=1&process">Answer</a>...</li>
-      </ul>
-      </div>
-    <div id="help-section" hidden>
-      <ul>
-	<li onmouseover="openhelp(this,'y1toggle','y2toggle','y3toggle','y4toggle');" 
-	    onmouseout="closehelp(this);">Toggle some partitions to activate them.</li>
-	<li onmouseover="openhelp(this,'y1','y2','y3','y4');" 
-	    onmouseout="closehelp(this);">Define the active partitions.</li>
-	<li onmouseover="openhelp(this,'submit');" 
-	    onmouseout="closehelp(this);">Press "Process".<br/>Puzzles will be created (as surfaces embedded in 4d).</li>
-	<li onmouseover="openhelp(this,'puzzles');" 
-	    onmouseout="closehelp(this);">They can be selected by left-clicking on the buttons in the lower section.<br/>The "&empty;" button is a template, numbered buttons are individual puzzles,<br/>the "S" button is a panoramic view (left-click on the picture to go from/to it).</li>
-	<li onmouseover="openhelp(this,'webglcanvas');" 
-	    onmouseout="closehelp(this);">Drag with the mouse/right-button to 3d-rotate the picture.</li>
-	<li onmouseover="openhelp(this,'sizes','tiles');" 
-	    onmouseout="closehelp(this);">Use ``Sizes'' and ``Tiles'' to vary those features of puzzles (before processing).</li>
-	<li onmouseover="openhelp(this,'controls');" 
-	    onmouseout="closehelp(this);">Use ``Controls'' for various preset views and keyboard shortcuts.</li>
-	<li onmouseover="openhelp(this,'examples');" 
-	    onmouseout="closehelp(this);">You can also browse the examples in the ``Examples'' section.</li>
-	<li>Known Bugs:
-	  <br/>canvas wobbling a bit
-	  <br/>line numbering is buggy with double puzzles or partial puzzles
-	  <br/>Resizing only works with certain browsers
-	</li>
-      </ul>
-    </div>
-    <div id="editor-section" hidden>
-      <p>Try building puzzles yourself! (alpha)</p>
-      <span class="toggle-button" id="editortoggle">Manual mode</span>
-      <p>Hints: <ul><li>Left click to select tiles at bottom, right click to unselect.</li><li>For easier editing, turn on ``Points'' in toggle view, and use views 0 or 1.</li><li>No erasing (but can undo last tile with middle button), only one editable puzzle at a time.</li></ul></p>
-    </div>
-    <div id="controls-section" hidden>
-      <ul>
-	<li>Predefined views:
-	  <ul>
-	    <li/><button onclick="presetView(0)">0</button> puzzle
-	    <li/><button onclick="presetView(1)">1</button> mosaic 
-	    <li/><button onclick="presetView(2)">2</button> tableau
-	    <span style="font-size:12px">(turn on frame and green line numbering)</span>
-	    <li/><button onclick="presetView(3)">3</button> dual tableau
-	    <span style="font-size:12px">(turn on frame and red line numbering)</span>
-	    <li/><button onclick="presetView(4)">4</button> square lattice
-	    <li/><button onclick="presetView(5)">5</button> honeycomb
-	    <span style="font-size:12px">(move a bit to 0 or 1, or use edge numbering)</span>
-	    <li/><button onclick="presetView(6)">6</button> dual honeycomb
-	    <span style="font-size:12px">(move a bit to 7 or 8, or use dual edge numbering)</span>
-	    <li/><button onclick="presetView(7)">7</button> dual puzzle
-	    <li/><button onclick="presetView(8)">8</button> dual mosaic
-	    <li/><button onclick="presetView(9)">9</button> puzzle rotated 180&deg;
-	  </ul>
-	</li>
-	<li><button onclick="toggleAnimation()">space</button> start/stop animation</li>
-	<li><button onclick="rotate90()">enter</button> rotate 90&deg; in the plane orthogonal to the projection plane</li>
-	<li>&larr; and &rarr; for previous/next puzzle, &uarr; and &darr; for previous/next series.
-      </ul>
-      <p><input type="checkbox" id="keyboard" checked onclick="toggleKeyboard(this.checked)"/>Enable keyboard shortcuts
-	<span style="font-size:12px">(prevents normal keyboard behavior)</span><br/>
-	<input type="checkbox" id="mousebuttons" onclick="toggleMouseButtons(this.checked)"/>Switch left and right mouse buttons
-      	<span style="font-size:12px">(or switch touch behavior)</span></p>
-    </div>
-</div>
-<div id="animation">
-  &nbsp;Animation&nbsp;speed:&nbsp;<input type="range" id="speed" oninput="setSpeed(this.value)" step="1" min="1" max="10" value="4"/>&nbsp;=&nbsp;<span id="speedtext" style="font-family:monospace">4</span>
-</div>
-<div id="colorintensity">
-    &nbsp;Color&nbsp;intensity:&nbsp;<input type="range" id="intens" step="0.01" min="0" max="1" value="1" oninput="setIntens(this.value)"/>
-</div>
-</div>
-<div id="list">
-    <div id="puzzles"><p>List of computed puzzles: <button onclick="clearPuzzles()">Clear</button></p></div>
-    <div id="debug" hidden></div>
-</div>
-<canvas id="textcanvas" width="32" height="32" hidden></canvas>
-</body> 
-
+  <canvas id="textcanvas" width="32" height="32" hidden></canvas>
+</body>
 </html>

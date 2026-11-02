@@ -2,11 +2,8 @@ var xmax0=10,ymax0=6;
 var boxsize0=20; // default size of each box in pixels
 var border0=5; // # pixels on boundary
 
-var occupiedselect="rgb(155,155,155)",
-    occupied="rgb(255,255,255)", // seems impossible to "fill" with transparent, despite all my attempts with globalCompositeOperation (serious implementation issues, apparently. the obvious guess, "copy", actually works on the whole canvas, would require clipping...). so I use clearRect instead
-    occupieddisabled="rgb(200,200,200)",
-    emptyselect="rgb(100,100,100)",
-    empty="rgb(0,0,0)";
+var occupiedselect='#527ba4', occupied='#304f74', occupieddisabled='#8b9caf',
+    emptyselect='#dce7f3', empty='#f4f6f9';
 
 // all the data are stored in the dynamic canvas (the one on top)
 // a bit of a hack, one should probably define a class etc
@@ -22,7 +19,10 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
     if (typeof(source)=='undefined') source=true; // by default, have a text field
 
     var div=document.getElementById(name);
-    div.style.position="relative"; //!!!! essential
+    var partitionName=['lambda','mu','nu','rho'][+name.slice(1)-1] || name;
+    var diagram=document.getElementById(name+'diagram') || div;
+    diagram.style.position='relative';
+    var ratio=Math.min(window.devicePixelRatio || 1,2);
 
     // dynamic canvas
     var canvas = document.createElement('canvas');
@@ -30,10 +30,17 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
     canvas.style.position="absolute";
     canvas.style.top=0;
     canvas.style.left=0;
+    canvas.style.width='100%';
+    canvas.style.height='100%';
+    canvas.setAttribute('role','img');
+    canvas.setAttribute('aria-label','Partition diagram; edit boxes with a pointer or use the row input.');
 
     // static canvas
     var canvas2 = document.createElement('canvas');  
     canvas2.id=name+"canvas2";
+    canvas2.style.width='100%';
+    canvas2.style.height='auto';
+    canvas2.setAttribute('aria-hidden','true');
 
     // the text input
     var src,src2;
@@ -42,14 +49,22 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 	src=document.createElement('input');
 	src.type="text"; // seems to be text by default
 	src.id=name+"src";
+	src.setAttribute('aria-label','Rows of partition '+partitionName);
+	src.autocomplete='off';
 	if (!enabled) src.disabled=true; // careful that "true" here is meaningless -- even "false" would turn disabled on
 	src2=document.createElement('input');
 	src2.type="text"; // seems to be text by default
 	src2.id=name+"src2";
+	src2.setAttribute('aria-label','Binary notation of partition '+partitionName);
+	src2.autocomplete='off';
 	if (!enabled) src2.disabled=true; // careful that "true" here is meaningless -- even "false" would turn disabled on
     }
 
     canvas.enabled=enabled;
+    canvas.canEdit=function() {
+	var settings=document.getElementById('calculation-settings');
+	return this.enabled && !(settings && settings.disabled);
+    };
 
     if (canvas.getContext)
     {
@@ -57,8 +72,10 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 	var cx,cy;
 	cx = boxsize*xmax+2*border;
 	cy = boxsize*ymax+2*border; 
-	canvas.width=cx;
-	canvas.height=cy;
+	canvas.width=Math.round(cx*ratio);
+	canvas.height=Math.round(cy*ratio);
+	diagram.style.width=cx+'px';
+	ctx.scale(ratio,ratio);
 	ctx.fillStyle=empty;
 	ctx.fillRect(0,0,cx,cy);
     }
@@ -73,8 +90,8 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
     canvas.getMousePos=function(event) // most reliable I've found so far...
     {
 	var rect=this.getBoundingClientRect();
-	return {x: event.clientX-rect.left,
-		y: event.clientY-rect.top};
+	return {x:(event.clientX-rect.left)*cx/(rect.width || cx),
+		y:(event.clientY-rect.top)*cy/(rect.height || cy)};
     }
 
 
@@ -83,10 +100,10 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 	var yo;
 	var t=young.testbox(x,y);
 	if (t==0)
-	    document.body.style.cursor="default";
+	    this.style.cursor="default";
 	else
 	{
-	    document.body.style.cursor="crosshair";
+	    this.style.cursor="crosshair";
 	    var grad=ctx.createRadialGradient(xx,yy,0,xx,yy,boxsize);//!
 	    if (t==-1) 
 	    {
@@ -109,20 +126,20 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 	if (t==1)
 	{
 	    ctx.fillStyle=empty;
-	    ctx.fillRect(border+x*boxsize,border+y*boxsize,boxsize,boxsize);
+	    ctx.fillRect(border+1+x*boxsize,border+1+y*boxsize,boxsize-2,boxsize-2);
 	}
 	else if (t==-1)
 	{
 //	    ctx.clearRect(border+x*boxsize,border+y*boxsize,boxsize,boxsize); // not fill with occupied <--- WHY NOT?
 	    if (this.enabled) ctx.fillStyle=occupied; else ctx.fillStyle=occupieddisabled;
-	    ctx.fillRect(border+x*boxsize,border+y*boxsize,boxsize,boxsize); // test
+	    ctx.fillRect(border+1+x*boxsize,border+1+y*boxsize,boxsize-2,boxsize-2);
 	}
     }
 
     canvas.onclick=function(event)
     {
-	if (!this.enabled) return false;
-	if (event.which==1) // left click
+        if (!this.canEdit()) return false;
+	if (event.button===0 || event.which===1)
 	{
 	    var pos=this.getMousePos(event);
 	    var x = Math.floor((pos.x-border)/boxsize);
@@ -131,7 +148,7 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 	    //	    var y = Math.floor((event.pageY - this.offsetTop-border)/boxsize);
 	    young.togglebox(x,y);
 	    if (source) { src.value=young.get(); src2.value=young.tobinarystring(); }
-	    this.drawnormal(x,y); // necessary because of this annoying transparency thing..
+	    this.redraw();
 	    this.drawselected(x,y,pos.x,pos.y);
 	    return false; // prevent default behavior -- not that we care so much since cursor style moved to onmousemove
 	}
@@ -140,7 +157,7 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
     var oldx=-1, oldy=-1;
     canvas.onmousemove=function(event) // we could use document.onmousemove instead, would be simpler but wouldn't be local
     {
-	if (!this.enabled) return false;
+	if (!this.canEdit()) return false;
 //	var x = Math.floor((event.pageX - this.offsetLeft-border)/boxsize);
 //	var y = Math.floor((event.pageY - this.offsetTop-border)/boxsize);
 	var pos=this.getMousePos(event);
@@ -156,7 +173,7 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 
     canvas.onmouseout=function(event) // instead we use mouseout, which is much cleaner
     {
-	if (!this.enabled) return false;
+	if (!this.canEdit()) { this.style.cursor='default'; return false; }
 	this.drawnormal(oldx,oldy);
 	oldx=oldy=-1;
     }
@@ -165,21 +182,22 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
     {
 	// redraw all
 	ctx.fillStyle=empty;
-	ctx.fillRect(0,0,this.width,this.height);
+	ctx.clearRect(0,0,cx,cy);
 	if (this.enabled) ctx.fillStyle=occupied; else ctx.fillStyle=occupieddisabled;
 	for (var i=0; i<young.length; i++)
-	    //	    ctx.clearRect(border,border+i*boxsize,boxsize*young[i],boxsize);
-	    ctx.fillRect(border,border+i*boxsize,boxsize*young[i],boxsize);
+	    for (var j=0; j<young[i]; j++)
+		ctx.fillRect(border+1+j*boxsize,border+1+i*boxsize,boxsize-2,boxsize-2);
     }
 
     young.set=function(p0) // redefined because need to redraw
     {
 	var flag=partition.prototype.set.call(this,p0); // inheritance
 	if (source) { src.value=this.get(); src2.value=this.tobinarystring(); }
-	if (flag)
+	if (flag) {
+	    reportInputError('');
 	    canvas.redraw();
-	else
-	    alert("Please make sure you type the partition as a nonincreasing sequence of integers, and that 'Sizes' are large enough.");
+	} else
+	    reportInputError("Enter nonincreasing, nonnegative integer rows that fit the bounding box.");
 	return flag;
     }
  
@@ -187,11 +205,12 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
     if (canvas2.getContext)
     {
  	var ctx2 = canvas2.getContext('2d');  
-	canvas2.width=cx;
-	canvas2.height=cy;
-	ctx2.fillStyle="white";
+	canvas2.width=Math.round(cx*ratio);
+	canvas2.height=Math.round(cy*ratio);
+	ctx2.scale(ratio,ratio);
+	ctx2.fillStyle=empty;
 	ctx2.fillRect(0,0,cx,cy);
-	ctx2.strokeStyle="black";
+	ctx2.strokeStyle='#c3cfdb';
 	ctx2.lineWidth=1;
 	for (var x=0;x<=xmax;x++)
 	{
@@ -225,34 +244,23 @@ function inityoung(name,ymax,xmax,boxsize,border,enabled,source)
 	}
     }
 
-    // now insert them
-/*
-    div.appendChild(canvas2);
-    div.appendChild(canvas);
-    div.appendChild(document.createElement('br'));
-*/
-    // in case there's some junk already
-//    div.insertBefore(document.createElement('br'),div.firstChild);
-//    if (complement) document.getElementById('debug').appendChild(comp);
-    div.insertBefore(canvas,div.firstChild);
-    div.insertBefore(canvas2,div.firstChild);
-	if (source) { div.appendChild(src); div.appendChild(src2); }
-
-    if (enabled) div.style.color=""; else div.style.color="gray";
+    diagram.appendChild(canvas2);
+    diagram.appendChild(canvas);
+    if (source) {
+	(document.getElementById(name+'rows') || div).appendChild(src);
+	(document.getElementById(name+'binary') || div).appendChild(src2);
+    }
+    div.classList.toggle('is-disabled',!enabled);
+    canvas.redraw();
     
     return young;
 }
 
 function destroyyoung(name)
 {
-    var div=document.getElementById(name);
-    div.removeChild(document.getElementById(name+"canvas"));
-    div.removeChild(document.getElementById(name+"canvas2"));
-    var src=document.getElementById(name+"src");
-    if (src!==null)
-	div.removeChild(src);
-    var src2=document.getElementById(name+"src2");
-    if (src2!==null)
-	div.removeChild(src2);
+    for (var suffix of ['canvas','canvas2','src','src2']) {
+	var element=document.getElementById(name+suffix);
+	if (element && element.parentElement) element.parentElement.removeChild(element);
+    }
 }
 

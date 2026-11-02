@@ -26,14 +26,33 @@ var icon; // little icon for current puzzle animation button
 // webgl stuff
 var gl;
 var canvas,precanvas;  
+var pixelRatio=1;
+
+// Interaction geometry uses CSS pixels; only the GPU buffer uses device pixels.
+function canvasSize()
+{
+    return {width:canvas.clientWidth || canvas.width,height:canvas.clientHeight || canvas.height};
+}
+
+function canvasMousePosition(event)
+{
+    if (typeof event.clientX==='number') {
+	var rect=canvas.getBoundingClientRect();
+	return {x:event.clientX-rect.left,y:event.clientY-rect.top};
+    }
+    return {x:event.layerX,y:event.layerY};
+}
+
 function initGL() // init openGL
 {
     try {
 	gl = canvas.getContext("webgl");
+	if (!gl) throw new Error('WebGL unavailable');
 //	gl = canvas.getContext("webgl", { premultipliedAlpha: false });
 	gl.viewport(0, 0, canvas.width, canvas.height);
     } 
-    catch(e) { alert("Could not initialise WebGL, sorry :-(");   }
+    catch(e) { reportInputError('WebGL is unavailable in this browser. Enable graphics acceleration or try another browser.'); return false; }
+    return true;
 }
 
 
@@ -249,7 +268,8 @@ var intens=1; // color intensity
 function conv4d2d(c4d) // convert from 4d to 2d: normally it's done by the gpu but just in case
 {
     var scale=document.getElementById('current').state.scale;
-    var aspect=canvas.width/canvas.height;
+    var viewport=canvasSize();
+    var aspect=viewport.width/viewport.height;
     var i,j,k;
     var c2d=[0,0];
     for (i=0; i<2; i++)
@@ -257,7 +277,7 @@ function conv4d2d(c4d) // convert from 4d to 2d: normally it's done by the gpu b
 	    for (k=0; k<4; k++)
 		c2d[i]+=mrot.e(i,j)*morth[j][k]*c4d[k]; // eww. rewrite better
     if (aspect<1) c2d[1]=c2d[1]*aspect; else c2d[0]=c2d[0]/aspect;
-    return [(scale*c2d[0]+1)*0.5*canvas.width,(-scale*c2d[1]+1)*0.5*canvas.height]; 
+    return [(scale*c2d[0]+1)*0.5*viewport.width,(-scale*c2d[1]+1)*0.5*viewport.height];
 }
 
 // mask values
@@ -315,10 +335,11 @@ function drawSceneInternal(graph,mask,scale,shift)
 	{
 	    uniform(gl.uniform1i,'sampler', graph.data[j].sampler);
 	    uniform(gl.uniform1f,'pointSize', graph.data[j].width); // width is size of "point"
+	    uniform(gl.uniform1f,'pixelRatio',pixelRatio);
 	}
 	else
 	{
-	    if (graph.data[j].width!==undefined) gl.lineWidth(graph.data[j].width); // ... or thickness of lines
+	    if (graph.data[j].width!==undefined) gl.lineWidth(graph.data[j].width*pixelRatio);
 	}
 	// then draw
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, graph.data[j].glbuffer);
@@ -331,16 +352,14 @@ function drawScene()
 {
     if (!gl) return;
 
-    // only change the size of the canvas if the size it's being displayed
-    // has changed.
-    var width = precanvas.clientWidth;
-    var height = precanvas.clientHeight;
-    if (canvas.width != width-10 || canvas.height != height-10)
+    var viewport=canvasSize();
+    pixelRatio=Math.min(window.devicePixelRatio || 1,2);
+    var width=Math.max(1,Math.round(viewport.width*pixelRatio));
+    var height=Math.max(1,Math.round(viewport.height*pixelRatio));
+    if (canvas.width!==width || canvas.height!==height)
     {
-	// Change the size of the canvas to match the size it's being displayed
-	// 10 seems the minimum value to not trigger grid auto resize leading to infinite loop of size expansion
-	canvas.width = width-10;
-	canvas.height = height-10;
+	canvas.width=width;
+	canvas.height=height;
     }
     gl.viewport(0, 0, canvas.width, canvas.height);
     
@@ -370,7 +389,7 @@ function drawScene()
     // set rotation matrix
     mrot.orthogonalize();
 
-    var aspect=canvas.width/canvas.height;
+    var aspect=viewport.width/viewport.height;
     var aspectx,aspecty; if (aspect<1) { aspectx=1; aspecty=1/aspect; } else { aspectx=aspect; aspecty=1; }
 
     if (graph instanceof Array) // panorama
@@ -379,9 +398,9 @@ function drawScene()
 	// n1*n2=n, n1/n2=aspect
 	var n2=Math.round(Math.sqrt(n/aspect)); // number of rows
 	if (n2>n) n2=n;
-	if (n2>canvas.height/60) n2=Math.round(canvas.height/60); // arbitrary max
+	if (n2>viewport.height/60) n2=Math.max(1,Math.round(viewport.height/60));
 	var n1=Math.ceil(n/n2); // number of columns
-	if (n1>canvas.width/60) n1=Math.round(canvas.width/60); // arbitrary max
+	if (n1>viewport.width/60) n1=Math.max(1,Math.round(viewport.width/60));
 	//	if (n>n1*n2) n=n1*n2;
 	if ((n>n1*n2)&&(!current.anim)) n=n1*n2; // might as well not draw those outside the viewing area
 	var sc=graph.scale*(1+aspect)/(n2*aspect+n1);
@@ -412,7 +431,7 @@ function drawScene()
 	    // now try to create a tile-shaped pointer...
 	    gl.depthFunc(gl.ALWAYS); // temporarily turn off depth -- may have weird effects with some rotations, but ultimately makes sense
 	    if ((graph.select>=0)&&(mouseX!==null)&&(mouseY!==null))
-		drawSceneInternal(tiles[graph.select],mask&(1+2+4+32),graph.scale,[(2*mouseX/canvas.width-1)*aspectx,(-2*mouseY/canvas.height+1)*aspecty,0.,0.]);
+		drawSceneInternal(tiles[graph.select],mask&(1+2+4+32),graph.scale,[(2*mouseX/viewport.width-1)*aspectx,(-2*mouseY/viewport.height+1)*aspecty,0.,0.]);
 	    gl.depthFunc(gl.LEQUAL); // and back on
 	}
     }
@@ -452,6 +471,7 @@ function rotateAnimFunc()
 
 
 var processAnimFlag=false;
+var processTimer;
 var shortenAnimFlag; // only well-defined when processAnimFunc is running
 
 function processDelay() 
@@ -482,7 +502,9 @@ function processAnimFunc()
 
 	destroyButton(but); but=null;
 
-	while ((res=makePuzzle())>=0) ; // 0 (backtrack) or 1 (add one more tile)
+	// Yield regularly so Abort and the rest of the interface remain responsive.
+	var deadline=Date.now()+12;
+	do { res=makePuzzle(); } while (res>=0 && Date.now()<deadline);
     }
     else // normal speed animation
     {
@@ -513,11 +535,12 @@ function processAnimFunc()
     }
     if (res!=-2)
     {
-	setTimeout(processAnimFunc, pd);
+	processTimer=setTimeout(processAnimFunc, pd);
 	if (res==-1) // new puzzle
 	{
 	    npuzzles++;
 	    createButton(npuzzles,buildScene({},true),but,buildUrl()).state.parts=parts; // insert before but if !==null. add "parts" to state... should be done in create button, of course
+	    syncInterface();
 	    // debug
 	    if (document.getElementById('debug').getAttribute('hidden')==null) dump();// careful, returns "" if hidden, null if not	    
 	    // end debug
@@ -532,12 +555,12 @@ function makeCurrent(but) // make a puzzle the currently viewed one
     if (old)
     {
 	old.removeAttribute("id");
-	old.style.backgroundColor="";
+	old.setAttribute('aria-pressed','false');
     }
     if (but)
     {
 	but.id='current'; // we don't really do anything, just tag it
-	but.style.backgroundColor="#D0E0FF"; // and color the background
+	but.setAttribute('aria-pressed','true');
 	var parts;
 	if (document.getElementById("updateparts").checked && ((parts=but.state.parts)!==undefined))
 	{ // ... and possibly update the partitions 
@@ -554,11 +577,13 @@ function makeCurrent(but) // make a puzzle the currently viewed one
 	if (but.anim) // unlikely event that we interrupted a panorama anim; or start of reverse anim
 	    setTimeout(panoramaAnimFunc, timerdelay2);
     }
+    syncInterface();
     drawScene();
 }
 
 function shortenAnim()
 { 
+    clearTimeout(processTimer);
     shortenAnimFlag=true;
     processAnimFunc();
 }
@@ -566,8 +591,9 @@ function shortenAnim()
 function endAnim() // end of process animation, either forcefully or because ran out of puzzles to make
 {
     processAnimFlag=false; // to avoid all kinds of nasty bugs...
+    clearTimeout(processTimer);
 
-    var but=icon.parentElement; // yeah, a bit tricky... 
+    var but=icon?icon.parentElement:null;
     var para=document.getElementById('currentpara');
 
     // destroy icon button
@@ -595,8 +621,9 @@ function endAnim() // end of process animation, either forcefully or because ran
     
     //    
     var submit=document.getElementById("submit");
-    submit.innerHTML="Process";
+    submit.textContent="Compute puzzles";
     submit.onclick=process;    
+    syncInterface();
 }
 
 
@@ -610,15 +637,19 @@ function createButton(text,graph,before,url="") // creates a button which secret
 {                                        // a bit risky because if somehow the buttons gets recreated, info will be lost 
     var para=document.getElementById('currentpara');
     var but=document.createElement('button');
+    but.type='button';
+    but.dataset.kind=typeof text==='number'?'puzzle':text==='S'?'overview':text==='*'?'progress':'template';
+    but.setAttribute('aria-pressed','false');
 
     but.onclick=loadPuzzle;
     but.url=url;
     but.onauxclick=openAssoc;
     but.state=graph; // !
     if (text=='*')
-	but.appendChild(icon);
+	{ but.appendChild(icon); but.setAttribute('aria-label','Computation in progress'); }
     else
-	but.innerHTML=text;
+	but.textContent=text==='S'?'Overview':text==='&empty;'?'Template':text==='M'?'Editing':text;
+    if (typeof text==='number') but.setAttribute('aria-label','Puzzle '+text);
     if (before)
 	para.insertBefore(but,before);
     else
@@ -653,6 +684,7 @@ function toggleAnimation()
 	randomanim=1;
 	setTimeout(rotateAnimFunc, timerdelay); // start animation
     }
+    syncInterface();
 }
 
 var rot90=new Matrix([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,-1,0]]);
@@ -665,9 +697,15 @@ function rotate90()
 
 function presetView(k)
 {
+    var select=document.getElementById('view-preset');
+    if (select) select.value=k;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+	mrot=new Matrix(mrot0[k]); animcount=randomanim=0; drawScene(); syncInterface(); return;
+    }
     m1rot.computerotation(mrot,mrot0[k],nsteps);
     animcount=nsteps; randomanim=0;
     setTimeout(rotateAnimFunc, timerdelay); // start animation
+    syncInterface();
 }
 
 
@@ -1382,6 +1420,7 @@ function clearPuzzles()
 	div.removeChild(para);
     }
     drawScene(); // empty screen
+    syncInterface();
     // TODO: reset canvas size to default?
 }
 
@@ -1391,9 +1430,10 @@ function process() // called when one presses the button... "process"
 
     if (!document.getElementById("y1toggle").checked && !document.getElementById("y2toggle").checked && !document.getElementById("y3toggle").checked && (!document.getElementById("double").checked || !document.getElementById("y4toggle").checked))
     {
-	alert('Please specify at least one partition.');
+	reportInputError('Enable at least one boundary partition before computing.');
 	return;
     }
+    reportInputError('');
 
     size1=+document.getElementById("height").textContent;
     size2=+document.getElementById("width").textContent;
@@ -1407,14 +1447,15 @@ function process() // called when one presses the button... "process"
     var div=document.getElementById('puzzles');
     var para=document.createElement('p');
     para.id="currentpara";
+    para.className='puzzle-series';
 
     // going to decode 3/4 young diagrams as boundary edges
     if (doublePuzzle)
-	para.innerHTML+="(D)";
+	para.innerHTML+="Double · ";
 
     if (document.getElementById("y1toggle").checked)
     {
-	para.innerHTML+=" 1: ("+(y[0].get())+")";
+	para.innerHTML+=" λ = ("+(y[0].get())+")";
 	if (document.getElementById("y1comp").checked)
 	{
 	    para.innerHTML+="*";
@@ -1430,7 +1471,7 @@ function process() // called when one presses the button... "process"
 
     if (document.getElementById("y2toggle").checked)
     {
-	para.innerHTML+=" 2: ("+(y[1].get())+")";
+	para.innerHTML+=" μ = ("+(y[1].get())+")";
 	if (document.getElementById("y2comp").checked)
 	{
 	    para.innerHTML+="*";
@@ -1446,7 +1487,7 @@ function process() // called when one presses the button... "process"
 	
     if (document.getElementById("y3toggle").checked)
     {
-	para.innerHTML+=" 3: ("+(y[2].get())+")";
+	para.innerHTML+=" ν = ("+(y[2].get())+")";
 	if (document.getElementById("y3comp").checked)
 	{
 	    para.innerHTML+="*";
@@ -1472,7 +1513,7 @@ function process() // called when one presses the button... "process"
 
     if (doublePuzzle && document.getElementById("y4toggle").checked)
     {
-	para.innerHTML+=" 4: ("+(y[3].get())+")";
+	para.innerHTML+=" ρ = ("+(y[3].get())+")";
 	if (document.getElementById("y4comp").checked)
 	{
 	    para.innerHTML+="*";
@@ -1519,7 +1560,7 @@ function process() // called when one presses the button... "process"
 	    div.removeChild(oldpara);
 	    */
 	    oldpara.lastElementChild.state.manual=false; // don't delete -- just tag it as noneditable
-	    oldpara.lastElementChild.innerHTML="&empty;";
+	    oldpara.lastElementChild.textContent='Template';
 	    oldpara.removeAttribute("id");
 	}
 	// first create a list of possible slots to insert a tile.
@@ -1532,8 +1573,9 @@ function process() // called when one presses the button... "process"
 	para.id="manualpara";
 
 	var submit=document.getElementById("submit");
-	submit.innerHTML="Complete"; // pressing on the button again will go back to non-manual mode
+	submit.textContent="Complete puzzle";
 	submit.onclick=complete;
+        syncInterface();
 
 	return;
     }
@@ -1561,7 +1603,8 @@ function startAnim()
 	submit.onclick=endAnim;
     }
     processAnimFlag=true;
-    setTimeout(processAnimFunc, pd);
+    syncInterface();
+    processTimer=setTimeout(processAnimFunc, pd);
 }
 
 function complete()
@@ -1569,9 +1612,10 @@ function complete()
     var para=document.getElementById("manualpara");
     if (!para) return ;
     para.id="currentpara";
-    var current=document.getElementById('current');
+    var current=para.lastElementChild;
     if (current===null) return;
-    current.innerHTML="&empty;";
+    makeCurrent(current);
+    current.textContent='Template';
     var graph=current.state;
     if (!graph) return;
     graph.manual=false;
@@ -1638,9 +1682,9 @@ function animateIcon()
 function handleKeyDown(event)
 {
     var active=document.activeElement;
-    if (active!=document.body && active.onclick!=loadPuzzle) return;
+    if (active!=document.body && active!=canvas && active.onclick!=loadPuzzle) return;
 
-    if (event.ctrlKey) return; // control combos shouldn't be prevented
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
 
     var key=event.key;
     // we allow arrows when playing with puzzle buttons
@@ -1662,23 +1706,25 @@ function handleKeyDown(event)
     }
     else if (key == "ArrowUp") // up
     {
-	if ((but=document.getElementById("current")) && (but.parentElement.previousSibling !== null) && (but.parentElement.previousSibling.firstElementChild !== null) && (but.parentElement.previousSibling.firstElementChild.innerHTML.length == 1)) //lame
+	if ((but=document.getElementById("current")) && but.parentElement.previousElementSibling && but.parentElement.previousElementSibling.querySelector('button'))
 	{
-	    if (active.id=='current') but.parentElement.previousSibling.firstElementChild.focus();
-	    makeCurrent(but.parentElement.previousSibling.firstElementChild);
+	    var previous=but.parentElement.previousElementSibling.querySelector('button');
+	    if (active.id=='current') previous.focus();
+	    makeCurrent(previous);
 	}	
     }
     else if (key == "ArrowDown") // down
     {
-	if ((but=document.getElementById("current")) && (but.parentElement.nextSibling !== null) && (but.parentElement.nextSibling.firstElementChild !== null) && (but.parentElement.nextSibling.firstElementChild.innerHTML.length == 1))
+        if ((but=document.getElementById("current")) && but.parentElement.nextElementSibling && but.parentElement.nextElementSibling.querySelector('button'))
 	{
-	    if (active.id=='current') but.parentElement.nextSibling.firstElementChild.focus();
-	    makeCurrent(but.parentElement.nextSibling.firstElementChild);
+	    var next=but.parentElement.nextElementSibling.querySelector('button');
+	    if (active.id=='current') next.focus();
+	    makeCurrent(next);
 	}
     }
     else
     {
-	if (active!=document.body) return; // for the rest, only if nothing is focused do we let keys work
+	if (active!=document.body && active!=canvas) return;
 
 	if (key == " ") // space
 	{
@@ -1722,7 +1768,8 @@ function handleKeyDown(event)
 
 function toggleLine(flag) // toggling from keyboard
 {
-    document.getElementById('check'+flag).onclick();
+    var control=document.getElementById('check'+flag);
+    control.update(!control.checked);
     drawScene();
 }
 
@@ -1738,8 +1785,9 @@ var leftButton=0;
 
 function handleMouseDown(event) 
 {
-    var x=event.layerX;
-    var y=event.layerY;
+    var pos=canvasMousePosition(event);
+    var x=pos.x, y=pos.y;
+    var viewport=canvasSize();
     
     document.activeElement.blur();
 
@@ -1764,9 +1812,9 @@ function handleMouseDown(event)
     {
 	if (graph.manual)
 	{
-	if (y>0.9*canvas.height) // TEMP. eventually tiles will be moved elsewhere
+	if (y>0.9*viewport.height)
 	{ // we've decided to select another tile
-	    var sel=Math.floor(x/canvas.width*tiles.length);
+	    var sel=Math.floor(x/viewport.width*tiles.length);
 	    if (sel<0 || sel>=tiles.length) sel=-1;
 	    if (sel!=graph.select)
 	    {
@@ -1961,17 +2009,17 @@ function handleMouseDown(event)
 	    {
 		var lst=current.parentElement.children;
 		var n=lst.length-2; // first one being template, last one being summary
-		var aspect=canvas.width/canvas.height;
+		var aspect=viewport.width/viewport.height;
 		var aspectx,aspecty; if (aspect<1) { aspectx=1; aspecty=1/aspect; } else { aspectx=aspect; aspecty=1; }
 		// n1*n2=n, n1/n2=aspect
 		var n2=Math.round(Math.sqrt(n/aspect)); // number of rows
 		if (n2>n) n2=n;
-		if (n2>canvas.height/60) n2=Math.round(canvas.height/60); // arbitrary max
+		if (n2>viewport.height/60) n2=Math.max(1,Math.round(viewport.height/60));
 		var n1=Math.ceil(n/n2); // number of columns
-		if (n1>canvas.width/60) n1=Math.round(canvas.width/60); // arbitrary max
+		if (n1>viewport.width/60) n1=Math.max(1,Math.round(viewport.width/60));
 		
-		var selx=Math.floor(x/canvas.width*n1);
-		var sely=Math.floor(y/canvas.height*n2); // not quite cause of 0.95...
+		var selx=Math.floor(x/viewport.width*n1);
+		var sely=Math.floor(y/viewport.height*n2);
 		var sel=sely*n1+selx;
 		if (sel<n)
 		{
@@ -2043,25 +2091,6 @@ function handleMouseOut()
     if (graph.manual&&(graph.select>=0)) drawScene();
 }
     
-function handleTouchStart(event)
-{
-    event.preventDefault(); // just in case...
-    var touches = event.changedTouches;
-    if (touches.length>0)
-    {
-/*	mouseDown = true;
-	mouseX = touches[0].pageX-canvas.offsetLeft; // best I've found...
-	mouseY = touches[0].pageY-canvas.offsetTop;
-*/
-	handleMouseDown( { layerX: touches[0].pageX-canvas.offsetLeft, layerY: touches[0].pageY-canvas.offsetTop, button: 0 } );
-    }
-}
-
-function handleTouchEnd(event)
-{
-    mouseDown = false;
-}
-
 function handleMouseUp(event) 
 {
     mouseDown = false;
@@ -2070,8 +2099,9 @@ function handleMouseUp(event)
 function screen2sphere(x,y)
 {
     var r=new Array(3);
-    var mx=canvas.width;
-    var my=canvas.height;
+    var viewport=canvasSize();
+    var mx=viewport.width;
+    var my=viewport.height;
     
     r[0]=2.0 * x - mx;
     r[1]=my - 2.0 * y;
@@ -2085,32 +2115,21 @@ function screen2sphere(x,y)
     return r;
 }
 
-function handleTouchMove(event)
-{
-    event.preventDefault(); // just in case...
-    var touches = event.changedTouches;
-    if (touches.length>0)
-	handleMouseMove( { layerX: touches[0].pageX-canvas.offsetLeft, layerY: touches[0].pageY-canvas.offsetTop } );
-/*    if (!mouseDown) return;
-	doRotation(touches[0].pageX-canvas.offsetLeft,touches[0].pageY-canvas.offsetTop);
-*/
-    
-}
-
 function handleMouseMove(event) 
 {
+    var pos=canvasMousePosition(event);
     var current=document.getElementById('current');
     if (current===null) return;
     var graph=current.state;
     if (graph===null) return;
     if (graph.manual&&(graph.select>=0))
     {
-	mouseX=event.layerX;
-	mouseY=event.layerY;
+	mouseX=pos.x;
+	mouseY=pos.y;
 	drawScene();
     }
     if (!mouseDown) return;
-    doRotation(event.layerX,event.layerY);
+    doRotation(pos.x,pos.y);
 }
 
 function doRotation(newX,newY)
@@ -2260,13 +2279,16 @@ function createTileable() // compute locations in global edge list where one can
 
 function setSize(which,value) 
 {
-    updateparam(which,value);
+    value=updateparam(which,value);
+    document.getElementById(which==='height'?'heightrange':'widthrange').value=value;
     resetYoung();
+    syncInterface();
 }
 
 function setSpeed(value) 
 {
     document.getElementById('speedtext').textContent= (value<10)? value : '\u221e';
+    syncInterface();
 }
 
 function setIntens(value)
@@ -2294,6 +2316,9 @@ function resetYoung(newy) // there should be a better way... if newy==null just 
 function toggleDouble(val) // shouldn't be called directly
 {
     document.getElementById("y4").hidden=!val;
+    var binary=document.getElementById('y4binary');
+    if (binary) binary.hidden=!val;
+    syncInterface();
 }
 
 function toggleKeyboard(val)
@@ -2336,10 +2361,7 @@ function togglePartition(s,b) // shouldn't be called directly
     }
 
     div=document.getElementById(s);
-    if (b)
-	div.style.color="";
-    else
-	div.style.color="gray";
+    div.classList.toggle('is-disabled',!b);
 
     if (inp=document.getElementById(s+"src")) // shitty syntax of "attributes" (as opposed to properties)
     {
@@ -2368,28 +2390,12 @@ function bool(str) // converts null or string from url to boolean
     return str!==null && str!==undefined && (str!=='false')&&((str==="")||(+str!=0));
 }
 
-/*
-function doresize()
-{
-//    document.getElementById("debug").innerHTML+="["+event.pageX+"/"+event.pageY+"]"
-    var x=event.pageX; var y=event.pageY;
-    if (x>100&&y>100)
-    {
-	canvas.width=event.pageX;
-	canvas.height=event.pageY;
-	precanvas.style.width=event.pageX;
-	precanvas.style.height=event.pageY;
-    }
-    drawScene(); // should be called automatically by the resize listener, but sadly sometimes isn't...
-}
-*/
-
 function updateparam(str,val)
 {
     if (Object.prototype.hasOwnProperty.call(numericparams,str)) val=numericparam(str,val);
     var el=document.getElementById(str);
-    if (el.tagName=="INPUT") el.value=+val;
-    else if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) el.update(bool(val)); // eww
+    if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) el.update(bool(val));
+    else if (el.tagName=="INPUT") el.value=+val;
     else el.textContent=val;
     return val;
 }
@@ -2439,8 +2445,8 @@ function parseURL()
 function getparam(str)
 {
     var el=document.getElementById(str);
-    if (el.tagName=="INPUT") return el.value;
-    else if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) return el.checked;
+    if ((el.classList[0]=="toggle-button")||(el.classList[0]=="complement")) return el.checked;
+    else if (el.tagName=="INPUT") return el.value;
     else return el.textContent;
 }
 
@@ -2455,6 +2461,14 @@ function updateURL()
     for (i=1; i<=4; i++)
         if (document.getElementById("y"+i+"toggle").checked)
 	    query.set('y'+i,y[i-1].get().toString());
+    var view=document.getElementById('view-preset');
+    if (view && +view.value!==0) query.set('view',view.value);
+    if (document.getElementById('check1')) {
+	var mask=0;
+	for (var flag=1; flag<=maxmask; flag*=2)
+	    if (document.getElementById('check'+flag).checked) mask+=flag;
+	if (mask!==8) query.set('mask',mask);
+    }
     var search=query.toString();
     document.getElementById('url').value=document.location.origin+document.location.pathname+(search?'?'+search:'');
 }
@@ -2465,7 +2479,11 @@ function startScript()
     precanvas = document.getElementById("precanvas");
     // get the webGL stuff working
     canvas = document.getElementById("webglcanvas");
-    initGL();
+    if (!initGL()) {
+	document.getElementById('calculation-settings').disabled=true;
+	document.getElementById('submit').disabled=true;
+	return;
+    }
     
     initShaders()
     
@@ -2489,10 +2507,13 @@ function startScript()
     updateURL();
 
      // view
-     mrot=new Matrix(mrot0[+gup('view')]);
+     var view=+gup('view');
+     if (!Number.isInteger(view) || view<0 || view>=mrot0.length) view=0;
+     mrot=new Matrix(mrot0[view]);
+     document.getElementById('view-preset').value=view;
 
      // mask
-     var mask=+gup('mask');
+     var mask=gup('mask')===null?8:+gup('mask');
      i=1;
      while (i<=maxmask)
      {
@@ -2502,24 +2523,20 @@ function startScript()
      
      // interface
      canvas.oncontextmenu = function() { return false; }
-     canvas.onmousedown = handleMouseDown;
-     canvas.onmouseout = handleMouseOut;
-     document.onmouseup = handleMouseUp;
-     canvas.onmousemove = handleMouseMove;
+     canvas.onpointerdown=function(event) {
+	canvas.setPointerCapture(event.pointerId);
+	handleMouseDown(event);
+	event.preventDefault();
+     };
+     canvas.onpointerleave=handleMouseOut;
+     canvas.onpointerup=handleMouseUp;
+     canvas.onpointercancel=handleMouseUp;
+     canvas.onpointermove=handleMouseMove;
      toggleKeyboard(document.getElementById('keyboard').checked);
 
-     // touch interface
-     canvas.addEventListener("touchstart",handleTouchStart,false);
-     canvas.addEventListener("touchend",handleTouchEnd,false);
-     canvas.addEventListener("touchcancel",handleTouchEnd,false);
-     canvas.addEventListener("touchmove",handleTouchMove,false);
-
-    //    window.addEventListener('resize',drawScene);
-    //    addResizeListener(precanvas, drawScene); // unfortunately resize only works for windows... have to use this special package
     new ResizeObserver(drawScene).observe(precanvas);
-     
-     //lame... no onload for non-body elements
-     document.getElementById("sizes").onclick();
+    window.addEventListener('resize',drawScene);
+    initInterface();
 
      //
      if (bool(gup('process'))) process();

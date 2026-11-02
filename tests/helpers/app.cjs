@@ -3,7 +3,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '../..');
-const scripts = ['partition.js', 'matrix.js', 'young.js', 'puzzle.js', 'toggle.js']
+const scripts = ['partition.js', 'matrix.js', 'ui.js', 'young.js', 'puzzle.js', 'toggle.js']
   .map(name => new vm.Script(fs.readFileSync(path.join(root, name), 'utf8'), {filename:name}));
 
 // A small DOM/canvas adapter for exercising the legacy scripts without a GPU.
@@ -22,6 +22,7 @@ function createApp(search = '') {
       this.children = [];
       this.className = '';
       this.attributes = new Map();
+      this.dataset = {};
       this._text = this._value = '';
       this.width = this.height = 300;
     }
@@ -33,7 +34,15 @@ function createApp(search = '') {
     get textContent() {return this._text;}
     set innerHTML(value) {htmlWrites.push({id:this.id, value:String(value)}); this._text = String(value);}
     get innerHTML() {return this._text;}
-    get classList() {return this.className.split(/\s+/);}
+    get classList() {
+      const classes = this.className.split(/\s+/);
+      classes.toggle = (name,enabled) => {
+        const values = new Set(this.className.split(/\s+/));
+        if (enabled) values.add(name); else values.delete(name);
+        this.className = [...values].join(' ');
+      };
+      return classes;
+    }
     get firstChild() {return this.children[0] || null;}
     get firstElementChild() {return this.firstChild;}
     get lastElementChild() {return this.children.at(-1) || null;}
@@ -52,6 +61,7 @@ function createApp(search = '') {
       return child;
     }
     getAttribute(name) {return this.attributes.get(name) ?? null;}
+    setAttribute(name, value) {this.attributes.set(name,String(value));}
     removeAttribute(name) {this.attributes.delete(name); if (name === 'disabled') this.disabled = false;}
     getContext() {return drawing;}
     getBoundingClientRect() {return {left:0, top:0};}
@@ -78,7 +88,7 @@ function createApp(search = '') {
   document.body = add('body', 'body');
   document.activeElement = document.body;
   const context = vm.createContext({document, window:{location}, URL, URLSearchParams,
-    alert:message => alerts.push(message), setTimeout:() => {}});
+    alert:message => alerts.push(message), setTimeout:() => {}, clearTimeout:() => {}});
   for (const script of scripts) script.runInContext(context);
   for (const id of ['height', 'width']) add(id).textContent = 2;
   for (const id of ['heightrange', 'widthrange']) add(id, 'input').value = 2;
@@ -86,13 +96,13 @@ function createApp(search = '') {
   add('intens', 'input').value = 1;
   for (const id of ['speedtext', 'url', 'puzzles', 'submit']) add(id);
   add('updateparts', 'input').checked = true;
-  add('double', 'span', 'toggle-button').onchange = function() {context.toggleDouble(this.checked);};
-  for (const id of ['K', 'Kinv', 'equiv', 'equiv2', 'equiv3', 'nondeg', 'editortoggle']) add(id, 'span', 'toggle-button');
+  add('double', 'input', 'toggle-button').onchange = function() {context.toggleDouble(this.checked);};
+  for (const id of ['K', 'Kinv', 'equiv', 'equiv2', 'equiv3', 'nondeg', 'editortoggle']) add(id, 'input', 'toggle-button');
   for (let i = 1; i <= 4; i++) {
     const id = 'y' + i;
     add(id, 'div');
-    add(id + 'toggle', 'span', 'toggle-button').onchange = function() {context.togglePartition(id, this.checked);};
-    add(id + 'comp', 'span', 'complement').onchange = () => context.toggleComp(id);
+    add(id + 'toggle', 'input', 'toggle-button').onchange = function() {context.togglePartition(id, this.checked);};
+    add(id + 'comp', 'button', 'complement').onchange = () => context.toggleComp(id);
   }
   context.initToggle();
   htmlWrites.length = 0;
