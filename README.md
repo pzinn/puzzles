@@ -4,6 +4,12 @@ A static JavaScript app for enumerating and visualizing Littlewood–Richardson
 puzzles and related tableaux, mosaics, and honeycombs. It also supports double
 puzzles and optional equivariant and K-theory tiles.
 
+The viewer requires a browser with WebGL and ResizeObserver support.
+
+## On github
+
+Open <https://pzinn.github.io/puzzles/>.
+
 ## Run locally
 
 Serve this directory with a static web server and open `index.html`. For example:
@@ -13,7 +19,6 @@ python3 -m http.server 8000
 ```
 
 Then visit `http://localhost:8000/`. No dependency installation or build is needed.
-The viewer requires a browser with WebGL and ResizeObserver support.
 
 ## Use the viewer
 
