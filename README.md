@@ -56,6 +56,24 @@ locked during enumeration and manual editing to preserve the active boundaries.
 Invalid numeric URL settings fall back to their defaults. Invalid partitions
 leave the previous partition unchanged and display a validation message.
 
+## Open a double puzzle in assoc
+
+Compute a double puzzle, then **middle-click a numbered result button** to open
+that exact result in a new tab. A normal click selects the result in this viewer.
+The button's tooltip identifies results that can be exported; Template and
+Overview do not have an assoc link.
+
+The destination is the sibling `../assoc/` site: when this viewer is served at
+`https://pzinn.github.io/puzzles/`, links open `https://pzinn.github.io/assoc/`.
+For local use, serve the assoc WebGL build at `/assoc/` beside `/puzzles/`.
+
+Links use `model=1&n=...&H=...&V=...`. `H` has `n+1` rows of `n` labels and
+`V` has `n` rows of `n+1` labels, flattened in row-major order without a
+trailing comma. Both grids use traditional labels `0`, `1`, and `10` on both
+halves of the puzzle. The retired `hcol`/`vcol` strand-colour parameters are
+not used. Export requires a complete double puzzle using those labels and a
+common seam labelled only `0` or `1`; extra edge states are not supported.
+
 ## Tests
 
 With Node.js 18 or newer:

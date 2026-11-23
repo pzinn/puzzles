@@ -629,8 +629,9 @@ function endAnim() // end of process animation, either forcefully or because ran
 
 function openAssoc(e)
 {
+    if (e.button!==1 || !this.url) return;
     e.preventDefault();
-    window.open(this.url);
+    window.open(this.url,'_blank','noopener');
 }
 
 function createButton(text,graph,before,url="") // creates a button which secretly contains all the graphical info to draw a puzzle
@@ -643,7 +644,10 @@ function createButton(text,graph,before,url="") // creates a button which secret
 
     but.onclick=loadPuzzle;
     but.url=url;
-    but.onauxclick=openAssoc;
+    if (url) {
+	but.onauxclick=openAssoc;
+	but.title='Middle-click to open this double puzzle in assoc';
+    }
     but.state=graph; // !
     if (text=='*')
 	{ but.appendChild(icon); but.setAttribute('aria-label','Computation in progress'); }
@@ -1025,20 +1029,30 @@ function updateCoords() // try to find new coordinates of vertices using known e
     while (ncoords>ncoords0);
 }
 
-function buildUrl() // build an url to call the associativity thing
+function buildUrl() // export a complete Grassmannian double puzzle to assoc
 {
-    var url="../assoc/?n="+size+"&hcol=";
-    for (i=1; i<=size+1; i++)
-	for (j=1; j<=size; j++)
-	    if (i+j<=size+1)
-		url+=(edge[i][j][0])+","; else url+=((edge[i][j][0]+2)%4)+",";
-    url+="&vcol=";
-    for (i=1; i<=size; i++)
-	for (j=1; j<=size+1; j++)
-	    if (i+j<=size+1)
-		url+=((edge[i][j][1]%3)+1)+","; else url+=((1<<(edge[i][j][1]-1))-1)+",";
-    
-    return url;
+    if (!doublePuzzle) return '';
+    var labels=[null,'0','1','10'];
+    var horizontal=[],vertical=[];
+    // assoc infers diagonals from H/V and requires a binary common seam.
+    // Extra edge states cannot be represented by its one-step input format.
+    for (var i=1; i<=size; i++)
+	for (var j=1; j<=size; j++)
+	    if (!labels[edge[i][j][2]] || (i+j===size+1 && edge[i][j][2]===3)) return '';
+    for (var i=1; i<=size+1; i++)
+	for (var j=1; j<=size; j++) {
+	    var label=labels[edge[i][j][0]];
+	    if (!label) return '';
+	    horizontal.push(label);
+	}
+    for (var i=1; i<=size; i++)
+	for (var j=1; j<=size+1; j++) {
+	    var label=labels[edge[i][j][1]];
+	    if (!label) return '';
+	    vertical.push(label);
+	}
+    // Both facets now use ordinary labels, in the same row order as the grid.
+    return '../assoc/?model=1&n='+size+'&H='+horizontal.join(',')+'&V='+vertical.join(',');
 }
 
 function buildScene(graph,init,center) // convert a puzzle (array of edge states) into graphical data (graph)
