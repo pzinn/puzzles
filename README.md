@@ -6,9 +6,9 @@ puzzles and optional equivariant and K-theory tiles.
 
 The viewer requires a browser with WebGL and ResizeObserver support.
 
-## On github
+## Try it online
 
-Open <https://pzinn.github.io/puzzles/>.
+[Open Puzzles on GitHub Pages](https://pzinn.github.io/puzzles/).
 
 ## Run locally
 
@@ -28,77 +28,36 @@ Then visit `http://localhost:8000/`. No dependency installation or build is need
   equivalent binary inputs.
 - Choose **Allowed tiles**, then **Compute puzzles**. Use the result buttons
   below the canvas, including **Overview** for the panorama and **Template** for
-  the boundary conditions. The **View** picker contains all ten preset views;
-  **Display** controls paths, arrows, numbering, and labels.
-- Open **Share** to copy a link to the current settings, preset view, annotations, and
-  active partitions. An empty partition can be shared as `?y1=` or `?y1=0`.
+  the boundary conditions. The **View** picker contains all ten preset views.
+  Use **Display** to toggle paths, arrows, numbering, and labels.
+- Open **Share** to copy a link to the current settings, preset view, annotations,
+  and active partitions.
 - Open **Manual editor**, enable **Build a puzzle by hand**, then **Start editing**.
   Select a tile from the bottom of the canvas before placing it.
-  Right-click deselects it; middle-click undoes the last placement. Choose
+  Right-click to deselect it or middle-click to undo the last placement. Choose
   **Complete puzzle** to enumerate completions of the edited puzzle.
 
-Right-drag to rotate the canvas. Touch uses the same pointer actions; enable
-**Swap pointer actions** under **Interaction options** to rotate by dragging on
-a touch screen. Display and view shortcuts also work while menu headings,
-buttons, or checkboxes have focus; the **View** picker accepts **0–9** directly.
-Typing fields keep their normal behavior. Space, Enter, and arrow keys retain
-their normal control actions; canvas shortcuts work with the page or canvas
-focused, and arrow navigation works on result buttons. Open **Help** for the
-shortcut list.
+Right-drag to rotate the canvas. On a touch screen, enable **Swap pointer
+actions** under **Interaction options** to rotate by dragging. Press **0–9**
+to switch views, or use the arrow keys to navigate result buttons. Open **Help**
+for the full shortcut list.
 
-The desktop layout keeps the calculation inspector beside the canvas, with its
-settings scrolling above a persistent compute action. On narrow
-screens the inspector stacks below the viewer. Canvas drawing resolution follows
-the display's pixel density (capped at 2×), while hit testing uses CSS pixels.
-Opening inspector sections does not resize the canvas. Computation settings are
-locked during enumeration and manual editing to preserve the active boundaries.
-
-Invalid numeric URL settings fall back to their defaults. Invalid partitions
-leave the previous partition unchanged and display a validation message.
+On narrow screens, scroll below the viewer to find the calculation inspector.
+Settings are locked while the viewer is computing or you are editing a puzzle
+by hand. If a partition is invalid, the viewer keeps its previous value and
+shows a message.
 
 ## Open a double puzzle in assoc
 
 Compute a double puzzle, select a numbered result, then choose **Open in assoc ↗**
 beside the Results heading to explore that exact result in 3D in a new tab.
-The action works with a mouse, keyboard, or touch. It explains when a result
-cannot be opened; from Template or Overview, select a numbered puzzle first.
-You can also **middle-click a numbered result button** as a shortcut.
+If you are viewing Template or Overview, select a numbered puzzle first. You
+can also **middle-click a result number** as a shortcut.
 
-The destination is the sibling `../assoc/` site: when this viewer is served at
-`https://pzinn.github.io/puzzles/`, links open `https://pzinn.github.io/assoc/`.
-For local use, serve the assoc WebGL build at `/assoc/` beside `/puzzles/`.
+The action explains why a result is unavailable. It requires a complete double
+puzzle with labels `0`, `1`, and `10`, and a shared boundary of `0`s and `1`s.
 
-Links use `model=1&n=...&H=...&V=...`. `H` has `n+1` rows of `n` labels and
-`V` has `n` rows of `n+1` labels, flattened in row-major order without a
-trailing comma. Both grids use traditional labels `0`, `1`, and `10` on both
-halves of the puzzle. The retired `hcol`/`vcol` strand-colour parameters are
-not used. Export requires a complete double puzzle using those labels and a
-common seam labelled only `0` or `1`; extra edge states are not supported.
+## Development
 
-## Tests
-
-With Node.js 18 or newer:
-
-```sh
-npm test
-```
-
-The tests use Node's built-in test runner and a small DOM/canvas adapter; there
-are no package dependencies. They exercise URL validation and round-tripping,
-partition validation and input synchronization, native controls, pixel-density
-and pointer-coordinate handling, manual editing, and known puzzle
-counts. Actual WebGL rendering and native browser interactions also need browser
-verification after UI or rendering changes.
-
-## Branch scope
-
-`main` starts from `master`. The separate `experimental` branch's rectangular
-double-puzzle and symmetry extensions have not been ported. Its stale second-size
-state and mismatched parameter defaults must be addressed during that port;
-`main` now keys defaults by parameter name to avoid positional mismatches.
-
-The interface is buildless and uses native form controls and disclosure panels;
-there is no framework or external font dependency.
-
-Line and edge numbering for partial and double puzzles retains the legacy
-behavior and still needs mathematical validation.
+See the [developer notes](DEVELOPMENT.md) for tests, browser behavior, and the
+`assoc` link format.
