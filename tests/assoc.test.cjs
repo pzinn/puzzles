@@ -88,3 +88,54 @@ test('only middle-clicking a linked result opens assoc; templates and right-clic
   }
   assert.deepEqual(opened, []);
 });
+
+test('the visible assoc link follows the selected result and its saved URL', () => {
+  const app = example();
+  const link = app.add('assoc-link', 'a');
+  const description = app.add('assoc-description', 'p');
+  app.add('currentpara', 'p');
+  app.el('updateparts').checked = false;
+  app.context.drawScene = () => {};
+  const firstUrl = app.context.buildUrl();
+  const first = app.context.createButton(1, {parts:[1,1,[],[],[],[]]}, null, firstUrl);
+  const secondUrl = firstUrl+'&viewer=simple';
+  const second = app.context.createButton(2, {parts:[1,1,[],[],[],[]]}, null, secondUrl);
+  const overview = app.context.createButton('S', []);
+
+  app.context.makeCurrent(first);
+  assert.equal(link.getAttribute('href'), firstUrl);
+  assert.equal(link.getAttribute('aria-disabled'), 'false');
+  assert.equal(description.textContent, 'Explore the selected double puzzle in 3D.');
+  assert.match(link.title, /middle-click/);
+
+  app.context.doublePuzzle = false;
+  app.el('double').checked = false;
+  app.context.syncInterface();
+  assert.equal(link.getAttribute('href'), firstUrl, 'Use the saved result, not new settings');
+  app.context.makeCurrent(second);
+  assert.equal(link.getAttribute('href'), secondUrl);
+  app.context.makeCurrent(overview);
+  assert.equal(link.getAttribute('href'), null, 'Remove a previously available destination');
+  assert.equal(link.getAttribute('aria-disabled'), 'true');
+  assert.match(description.textContent, /Select a numbered puzzle first/);
+});
+
+test('the visible assoc action explains unavailable states and clears stale links', () => {
+  const app = example();
+  const link = app.add('assoc-link', 'a');
+  const description = app.add('assoc-description', 'p');
+  const states = [
+    [null, /Compute a double puzzle/],
+    [{dataset:{kind:'template'},state:{}}, /Select a numbered puzzle first/],
+    [{dataset:{kind:'puzzle'},state:{parts:[1,1,[],[],[]]}}, /result is triangular/],
+    [{dataset:{kind:'puzzle'},state:{parts:[1,1,[],[],[],[]]}}, /requires labels 0, 1, 10/]
+  ];
+  for (const [current, reason] of states) {
+    link.setAttribute('href', '../assoc/?old');
+    app.context.syncAssocLink(current);
+    assert.equal(link.getAttribute('href'), null);
+    assert.equal(link.getAttribute('aria-disabled'), 'true');
+    assert.match(description.textContent, reason);
+    assert.match(link.title, reason);
+  }
+});

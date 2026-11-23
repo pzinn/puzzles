@@ -58,10 +58,11 @@ leave the previous partition unchanged and display a validation message.
 
 ## Open a double puzzle in assoc
 
-Compute a double puzzle, then **middle-click a numbered result button** to open
-that exact result in a new tab. A normal click selects the result in this viewer.
-The button's tooltip identifies results that can be exported; Template and
-Overview do not have an assoc link.
+Compute a double puzzle, select a numbered result, then choose **Open in assoc ↗**
+beside the Results heading to explore that exact result in 3D in a new tab.
+The action works with a mouse, keyboard, or touch. It explains when a result
+cannot be opened; from Template or Overview, select a numbered puzzle first.
+You can also **middle-click a numbered result button** as a shortcut.
 
 The destination is the sibling `../assoc/` site: when this viewer is served at
 `https://pzinn.github.io/puzzles/`, links open `https://pzinn.github.io/assoc/`.

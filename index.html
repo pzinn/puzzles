@@ -94,7 +94,7 @@ void main(void)
         <details class="popover" id="help"><summary>Help</summary><div class="popover-panel help-panel">
           <h2>Explore a puzzle</h2>
           <ol><li>Choose the bounding box, enable partitions, and enter their rows or edit their diagrams.</li><li>Select allowed tiles, then choose <strong>Compute puzzles</strong>.</li><li>Choose a numbered result or <strong>Overview</strong>. Right-drag the canvas to rotate; click a puzzle in the overview to inspect it.</li></ol>
-          <p>Middle-click a numbered double-puzzle result to open it in <strong>assoc</strong>. The button's tooltip indicates when export is available.</p>
+          <p>Select a numbered double-puzzle result, then choose <strong>Open in assoc</strong> to explore it in 3D. You can also middle-click the result number.</p>
           <p>Partitions are read from bottom/left to top/right. Use <strong>Arrows</strong> in Display to see their orientation.</p>
           <h3>Keyboard shortcuts</h3>
           <p><kbd>0</kbd>–<kbd>9</kbd> views · <kbd>Space</kbd> animate · <kbd>Enter</kbd> rotate 90° · <kbd>←</kbd>/<kbd>→</kbd> results · <kbd>↑</kbd>/<kbd>↓</kbd> calculations.</p>
@@ -143,7 +143,8 @@ void main(void)
           <details class="pointer-options"><summary>Interaction options</summary><div><label class="check"><input type="checkbox" id="keyboard" checked onchange="toggleKeyboard(this.checked)">Keyboard shortcuts</label><label class="check"><input type="checkbox" id="mousebuttons" onchange="toggleMouseButtons(this.checked)">Swap pointer actions</label></div></details>
         </div>
         <section id="list" class="results" aria-labelledby="results-title">
-          <div class="results-heading"><h2 id="results-title">Results <span id="result-count"></span></h2><button type="button" onclick="clearPuzzles()">Clear</button></div>
+          <div class="results-heading"><h2 id="results-title">Results <span id="result-count"></span></h2><div class="results-actions"><a id="assoc-link" class="button assoc-link" role="link" tabindex="0" aria-disabled="true" aria-describedby="assoc-description" target="_blank" rel="noopener">Open in assoc <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a><button type="button" onclick="clearPuzzles()">Clear</button></div></div>
+          <p id="assoc-description" class="field-note assoc-description" role="status">Explore the selected double puzzle in 3D. Compute a double puzzle to get started.</p>
           <div id="puzzles"><p id="results-placeholder" class="field-note">Computed puzzles will appear here.</p></div><div id="debug" hidden></div>
         </section>
       </main>

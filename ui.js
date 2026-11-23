@@ -6,12 +6,36 @@ function reportInputError(message)
     else if (message) alert(message);
 }
 
+function syncAssocLink(current)
+{
+    var link=document.getElementById('assoc-link');
+    var description=document.getElementById('assoc-description');
+    if (!link || !description) return;
+
+    var available=!!(current && current.dataset.kind==='puzzle' && current.url);
+    var reason='';
+    if (available) link.setAttribute('href',current.url);
+    else {
+	link.removeAttribute('href');
+	if (!current) reason='Compute a double puzzle to get started.';
+	else if (current.dataset.kind!=='puzzle') reason='Select a numbered puzzle first.';
+	else if (current.state.parts && current.state.parts.length===5)
+	    reason='assoc opens double puzzles; this result is triangular.';
+	else reason='assoc requires labels 0, 1, 10 and a shared boundary of 0s and 1s.';
+    }
+    link.setAttribute('aria-disabled',String(!available));
+    link.title=available ? 'Opens in a new tab. You can also middle-click a result number.' : reason;
+    var message='Explore the selected double puzzle in 3D.'+(reason?' '+reason:'');
+    if (description.textContent!==message) description.textContent=message;
+}
+
 function syncInterface()
 {
+    var current=document.getElementById('current');
+    syncAssocLink(current);
     var summary=document.getElementById('workspace-summary');
     if (!summary) return; // The solver can also run without the application shell.
     var manual=document.getElementById('manualpara');
-    var current=document.getElementById('current');
     var height=document.getElementById('height').textContent;
     var width=document.getElementById('width').textContent;
     summary.textContent=(document.getElementById('double').checked?'Double puzzle':'Triangular puzzle')+' · '+height+' × '+width+' box';
